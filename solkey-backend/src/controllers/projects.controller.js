@@ -1,10 +1,11 @@
-// Import necessary modules and models
 const Project = require('../models/project.model');
 
-// Create a new project
 exports.createProject = async (req, res) => {
     try {
-        const project = new Project(req.body);
+        const project = new Project({
+            ...req.body,
+            owner: req.user.id
+        });
         await project.save();
         res.status(201).send(project);
     } catch (error) {
@@ -12,20 +13,21 @@ exports.createProject = async (req, res) => {
     }
 };
 
-// Get all projects
 exports.getAllProjects = async (req, res) => {
     try {
-        const projects = await Project.find();
+        const projects = await Project.find({ owner: req.user.id });
         res.status(200).send(projects);
     } catch (error) {
         res.status(500).send({ error: 'Error fetching projects' });
     }
 };
 
-// Get a project by ID
 exports.getProjectById = async (req, res) => {
     try {
-        const project = await Project.findById(req.params.id);
+        const project = await Project.findOne({ 
+            _id: req.params.id,
+            owner: req.user.id
+        });
         if (!project) {
             return res.status(404).send({ error: 'Project not found' });
         }
@@ -35,10 +37,13 @@ exports.getProjectById = async (req, res) => {
     }
 };
 
-// Update a project by ID
 exports.updateProject = async (req, res) => {
     try {
-        const project = await Project.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const project = await Project.findOneAndUpdate(
+            { _id: req.params.id, owner: req.user.id },
+            req.body,
+            { new: true }
+        );
         if (!project) {
             return res.status(404).send({ error: 'Project not found' });
         }
@@ -48,10 +53,12 @@ exports.updateProject = async (req, res) => {
     }
 };
 
-// Delete a project by ID
 exports.deleteProject = async (req, res) => {
     try {
-        const project = await Project.findByIdAndDelete(req.params.id);
+        const project = await Project.findOneAndDelete({
+            _id: req.params.id,
+            owner: req.user.id
+        });
         if (!project) {
             return res.status(404).send({ error: 'Project not found' });
         }

@@ -1,19 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
-const authMiddleware = require('../middleware/auth.middleware');
+const { authenticateToken, requireWallet } = require('../middleware/auth.middleware');
 
-// Route for user registration
+router.get('/google', authController.googleAuth);
+router.get('/google/callback', authController.googleCallback);
+router.get('/github', authController.githubAuth);
+router.get('/github/callback', authController.githubCallback);
+
 router.post('/register', authController.register);
-
-// Route for user login
 router.post('/login', authController.login);
+router.post('/logout', authenticateToken, authController.logout);
 
-// Route for user logout
-router.post('/logout', authMiddleware.verifyToken, authController.logout);
+router.post('/wallet/connect', authenticateToken, authController.connectWallet);
+router.post('/wallet/sign', authenticateToken, requireWallet, authController.signMessage);
 
-// Route for connecting a wallet
-router.post('/connect-wallet', authMiddleware.verifyToken, authController.connectWallet);
-
-// Export the router
 module.exports = router;

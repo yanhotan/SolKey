@@ -1,18 +1,14 @@
 const crypto = require('crypto');
 
-/**
- * Generates a random initialization vector for encryption.
- * @returns {Buffer} The initialization vector.
- */
+/** @returns {Buffer} Initialization vector */
 function generateIV() {
     return crypto.randomBytes(16);
 }
 
-/**
- * Encrypts a given text using AES-256-CBC algorithm.
- * @param {string} text - The text to encrypt.
- * @param {string} key - The encryption key.
- * @returns {Object} The encrypted data and initialization vector.
+/** 
+ * @param {string} text Text to encrypt
+ * @param {string} key Encryption key
+ * @returns {{iv: string, encryptedData: string}} Encrypted data with IV
  */
 function encrypt(text, key) {
     const iv = generateIV();
@@ -25,11 +21,10 @@ function encrypt(text, key) {
     };
 }
 
-/**
- * Decrypts a given encrypted data using AES-256-CBC algorithm.
- * @param {Object} encryptedData - The encrypted data and initialization vector.
- * @param {string} key - The decryption key.
- * @returns {string} The decrypted text.
+/** 
+ * @param {{iv: string, encryptedData: string}} encryptedData Data to decrypt
+ * @param {string} key Decryption key
+ * @returns {string} Decrypted text
  */
 function decrypt(encryptedData, key) {
     const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key), Buffer.from(encryptedData.iv, 'hex'));

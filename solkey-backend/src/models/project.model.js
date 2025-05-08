@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-// Define the schema for a project
 const projectSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -31,13 +30,9 @@ const projectSchema = new mongoose.Schema({
     }
 });
 
-// Middleware to update the updatedAt field before saving
 projectSchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     next();
 });
 
-// Create the model from the schema
-const Project = mongoose.model('Project', projectSchema);
-
-module.exports = Project;
+module.exports = mongoose.model('Project', projectSchema);

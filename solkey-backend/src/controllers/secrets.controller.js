@@ -1,58 +1,82 @@
-// Import necessary modules and services
 const Secret = require('../models/secret.model');
 const { encrypt, decrypt } = require('../services/encryption.service');
 
-// Create a new secret
 exports.createSecret = async (req, res) => {
     try {
         const { title, content } = req.body;
         const encryptedContent = encrypt(content);
-        const newSecret = new Secret({ title, content: encryptedContent });
+        const newSecret = new Secret({
+            title,
+            content: encryptedContent,
+            userId: req.user.id
+        });
         await newSecret.save();
-        res.status(201).json({ message: 'Secret created successfully', secret: newSecret });
+        res.status(201).json({ message: 'Secret created', secret: newSecret });
     } catch (error) {
-        res.status(500).json({ message: 'Error creating secret', error });
+        res.status(500).json({ error: 'Error creating secret' });
     }
 };
 
-// Retrieve a secret by ID
-exports.getSecret = async (req, res) => {
+exports.getAllSecrets = async (req, res) => {
     try {
-        const secret = await Secret.findById(req.params.id);
+        const secrets = await Secret.find({ userId: req.user.id });
+        res.status(200).json({ secrets });
+    } catch (error) {
+        res.status(500).json({ error: 'Error retrieving secrets' });
+    }
+};
+
+exports.getSecretById = async (req, res) => {
+    try {
+        const secret = await Secret.findOne({ 
+            _id: req.params.id,
+            userId: req.user.id
+        });
         if (!secret) {
-            return res.status(404).json({ message: 'Secret not found' });
+            return res.status(404).json({ error: 'Secret not found' });
         }
         const decryptedContent = decrypt(secret.content);
-        res.status(200).json({ title: secret.title, content: decryptedContent });
+        res.status(200).json({
+            id: secret._id,
+            title: secret.title,
+            content: decryptedContent,
+            createdAt: secret.createdAt,
+            updatedAt: secret.updatedAt
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Error retrieving secret', error });
+        res.status(500).json({ error: 'Error retrieving secret' });
     }
 };
 
-// Update a secret by ID
 exports.updateSecret = async (req, res) => {
     try {
         const { title, content } = req.body;
         const encryptedContent = encrypt(content);
-        const updatedSecret = await Secret.findByIdAndUpdate(req.params.id, { title, content: encryptedContent }, { new: true });
-        if (!updatedSecret) {
-            return res.status(404).json({ message: 'Secret not found' });
+        const secret = await Secret.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user.id },
+            { title, content: encryptedContent },
+            { new: true }
+        );
+        if (!secret) {
+            return res.status(404).json({ error: 'Secret not found' });
         }
-        res.status(200).json({ message: 'Secret updated successfully', secret: updatedSecret });
+        res.status(200).json({ message: 'Secret updated', secret });
     } catch (error) {
-        res.status(500).json({ message: 'Error updating secret', error });
+        res.status(500).json({ error: 'Error updating secret' });
     }
 };
 
-// Delete a secret by ID
 exports.deleteSecret = async (req, res) => {
     try {
-        const deletedSecret = await Secret.findByIdAndDelete(req.params.id);
-        if (!deletedSecret) {
-            return res.status(404).json({ message: 'Secret not found' });
+        const secret = await Secret.findOneAndDelete({
+            _id: req.params.id,
+            userId: req.user.id
+        });
+        if (!secret) {
+            return res.status(404).json({ error: 'Secret not found' });
         }
-        res.status(200).json({ message: 'Secret deleted successfully' });
+        res.status(200).json({ message: 'Secret deleted' });
     } catch (error) {
-        res.status(500).json({ message: 'Error deleting secret', error });
+        res.status(500).json({ error: 'Error deleting secret' });
     }
 };

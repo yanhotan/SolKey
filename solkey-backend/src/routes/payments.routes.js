@@ -1,15 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const paymentsController = require('../controllers/payments.controller');
-const authMiddleware = require('../middleware/auth.middleware');
+const { authenticateToken } = require('../middleware/auth.middleware');
 
-// Route to process a payment
-router.post('/process', authMiddleware.authenticate, paymentsController.processPayment);
-
-// Route to get transaction history
-router.get('/history', authMiddleware.authenticate, paymentsController.getTransactionHistory);
-
-// Route to subscribe to a payment plan
-router.post('/subscribe', authMiddleware.authenticate, paymentsController.subscribeToPlan);
+router.post('/process', authenticateToken, paymentsController.processPayment);
+router.get('/history', authenticateToken, paymentsController.getTransactionHistory);
+router.post('/subscribe', authenticateToken, paymentsController.subscribeToPlan);
 
 module.exports = router;

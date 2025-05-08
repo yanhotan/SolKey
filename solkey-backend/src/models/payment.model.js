@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-// Define the schema for payment transactions
 const paymentSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -34,7 +33,6 @@ const paymentSchema = new mongoose.Schema({
     }
 });
 
-// Create the Payment model
 const Payment = mongoose.model('Payment', paymentSchema);
 
 module.exports = Payment;

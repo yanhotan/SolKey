@@ -1,11 +1,21 @@
-// Configuration settings for authentication
 const config = {
-    jwtSecret: process.env.JWT_SECRET || 'your_jwt_secret', // Secret key for JWT signing
+    jwtSecret: process.env.JWT_SECRET || 'your_jwt_secret',
+    jwtExpiresIn: '24h',
     oauth: {
-        provider: 'your_oauth_provider', // OAuth provider (e.g., Google, GitHub)
-        clientId: process.env.OAUTH_CLIENT_ID || 'your_client_id', // Client ID for OAuth
-        clientSecret: process.env.OAUTH_CLIENT_SECRET || 'your_client_secret', // Client secret for OAuth
-        callbackUrl: process.env.OAUTH_CALLBACK_URL || 'http://localhost:3000/auth/callback' // Callback URL after authentication
+        google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            callbackURL: process.env.GOOGLE_CALLBACK_URL
+        },
+        github: {
+            clientId: process.env.GITHUB_CLIENT_ID,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET,
+            callbackURL: process.env.GITHUB_CALLBACK_URL
+        }
+    },
+    walletAuth: {
+        signatureMessage: 'Welcome to SolKey! Sign this message to secure your secrets.',
+        signatureExpiry: '5m'
     }
 };
 
