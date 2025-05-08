@@ -1,0 +1,26 @@
+{
+  "name": "solkey-backend",
+  "version": "1.0.0",
+  "description": "A secrets management platform with wallet-based encryption and Solana payment integration.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "mongoose": "^5.10.9",
+    "jsonwebtoken": "^8.5.1",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^8.2.0",
+    "cors": "^2.8.5",
+    "body-parser": "^1.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4",
+    "jest": "^26.6.3"
+  },
+  "author": "Your Name",
+  "license": "MIT"
+}
