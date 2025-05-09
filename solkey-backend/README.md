@@ -12,6 +12,63 @@ SolKey is a secrets management platform that provides secure storage and managem
 - **Payment Integration**: Process payments using Solana blockchain.
 - **Team Management**: Invite team members and manage roles.
 
+## Quick Start
+
+1. Copy environment variables:
+```bash
+cp .env.example .env.local
+```
+
+2. Update the `.env.local` with your credentials:
+- MongoDB connection string
+- JWT secret
+- OAuth credentials
+- Solana configuration
+
+3. Run with Docker:
+```bash
+docker-compose up --build
+```
+
+The application will be available at http://localhost:3000
+
+## Development
+
+### Prerequisites
+- Docker and Docker Compose
+- Node.js 20.x
+- MongoDB Atlas account or local MongoDB instance
+
+### Environment Variables
+
+Required environment variables are documented in `.env.example`. Make sure to set all required variables in your `.env.local` file.
+
+### Health Checks
+- Backend API: http://localhost:3000/health
+- MongoDB: Automatically checked by Docker healthcheck
+
+### Available Scripts
+- `docker-compose up --build`: Build and start all services
+- `docker-compose down -v`: Stop all services and remove volumes
+- `docker-compose logs -f`: Follow logs from all services
+
+### Troubleshooting
+
+If you encounter connection issues:
+1. Ensure MongoDB URI is correct in your .env.local
+2. Check if the MongoDB service is healthy: `docker-compose ps`
+3. View logs: `docker-compose logs mongodb`
+
+## Architecture
+
+The backend follows a modular architecture:
+- `/controllers`: Request handlers
+- `/models`: MongoDB schemas
+- `/routes`: API routes
+- `/services`: Business logic
+- `/middleware`: Express middleware
+- `/utils`: Utility functions
+
 ## Getting Started
 
 ### Prerequisites

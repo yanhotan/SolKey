@@ -1,34 +1,97 @@
 const jwt = require('jsonwebtoken');
-const config = require('../config/auth');
+const config = require('../config/env');
+const { AppError } = require('./error.middleware');
 const User = require('../models/user.model');
 
-exports.authenticateToken = async (req, res, next) => {
+const TOKEN_BLACKLIST = new Set();
+
+const authenticateToken = (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
+        const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
 
         if (!token) {
-            return res.status(401).json({ message: 'No token provided' });
+            throw new AppError('No token provided', 401);
         }
 
-        const decoded = jwt.verify(token, config.jwtSecret);
-        const user = await User.findById(decoded.id);
-        
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+        if (TOKEN_BLACKLIST.has(token)) {
+            throw new AppError('Token has been revoked', 401);
         }
 
-        req.user = decoded;
-        next();
+        jwt.verify(token, config.jwt.secret, (err, decoded) => {
+            if (err) {
+                if (err.name === 'TokenExpiredError') {
+                    throw new AppError('Token expired', 401);
+                }
+                if (err.name === 'JsonWebTokenError') {
+                    throw new AppError('Invalid token', 401);
+                }
+                throw new AppError('Token verification failed', 401);
+            }
+
+            // Add user info to request
+            req.user = decoded;
+            next();
+        });
     } catch (error) {
-        if (error instanceof jwt.TokenExpiredError) {
-            return res.status(401).json({ message: 'Token expired' });
-        }
-        return res.status(403).json({ message: 'Invalid token' });
+        next(error);
     }
 };
 
-exports.requireWallet = async (req, res, next) => {
+const generateToken = (user) => {
+    return jwt.sign(
+        { 
+            id: user._id,
+            email: user.email,
+            walletAddress: user.walletAddress
+        },
+        config.jwt.secret,
+        { 
+            expiresIn: config.jwt.expiresIn,
+            algorithm: 'HS512'  // Use stronger algorithm
+        }
+    );
+};
+
+const revokeToken = (token) => {
+    TOKEN_BLACKLIST.add(token);
+    // Implement cleanup of expired tokens from blacklist
+    setTimeout(() => {
+        TOKEN_BLACKLIST.delete(token);
+    }, parseInt(config.jwt.expiresIn) * 1000);
+};
+
+const requireRole = (role) => {
+    return (req, res, next) => {
+        if (!req.user || !req.user.roles || !req.user.roles.includes(role)) {
+            throw new AppError('Insufficient permissions', 403);
+        }
+        next();
+    };
+};
+
+const validateWalletSignature = async (req, res, next) => {
+    try {
+        const { walletAddress, signature, message } = req.body;
+        
+        if (!walletAddress || !signature || !message) {
+            throw new AppError('Missing wallet authentication parameters', 400);
+        }
+
+        const solanaService = require('../services/solana.service');
+        const isValid = await solanaService.validateWalletAddress(walletAddress);
+        
+        if (!isValid) {
+            throw new AppError('Invalid wallet address', 400);
+        }
+
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
+
+const requireWallet = async (req, res, next) => {
     try {
         const user = await User.findById(req.user.id);
         
@@ -45,7 +108,7 @@ exports.requireWallet = async (req, res, next) => {
     }
 };
 
-exports.requireWalletSignature = (req, res, next) => {
+const requireWalletSignature = (req, res, next) => {
     if (!req.user.walletVerified || !req.user.encryptionKey) {
         return res.status(403).json({
             message: 'Wallet signature required for encryption operations',
@@ -53,4 +116,14 @@ exports.requireWalletSignature = (req, res, next) => {
         });
     }
     next();
+};
+
+module.exports = {
+    authenticateToken,
+    generateToken,
+    revokeToken,
+    requireRole,
+    validateWalletSignature,
+    requireWallet,
+    requireWalletSignature
 };

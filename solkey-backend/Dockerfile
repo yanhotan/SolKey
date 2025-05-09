@@ -1,21 +1,41 @@
-# Use Node.js LTS version as base image
-FROM node:18-slim
+# Use Node.js 20 as the base image
+FROM node:20-alpine
+
+# Add non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Set working directory
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# Install dependencies first (for better caching)
+# Install system dependencies
+RUN apk add --no-cache dumb-init
+
+# Copy package files
 COPY package*.json ./
-RUN npm install
 
-# Copy source code
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy application files
 COPY . .
 
-# Create a .env file from example if it doesn't exist
-RUN cp -n .env.example .env 2>/dev/null || true
+# Set proper permissions
+RUN chown -R appuser:appgroup /app
 
-# Expose port
-EXPOSE 3000
+# Use non-root user
+USER appuser
+
+# Use dumb-init as entrypoint
+ENTRYPOINT ["dumb-init", "--"]
+
+# Set environment variables
+ENV NODE_ENV=production \
+    NODE_OPTIONS="--max-old-space-size=2048" \
+    NPM_CONFIG_LOGLEVEL=warn
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/health || exit 1
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["node", "src/server.js"]

@@ -5,6 +5,14 @@ function generateIV() {
     return crypto.randomBytes(16);
 }
 
+/**
+ * @param {string} text Text to hash
+ * @returns {string} SHA-256 hash in hex format
+ */
+function hash(text) {
+    return crypto.createHash('sha256').update(text).digest('hex');
+}
+
 /** 
  * @param {string} text Text to encrypt
  * @param {string} key Encryption key
@@ -35,5 +43,6 @@ function decrypt(encryptedData, key) {
 
 module.exports = {
     encrypt,
-    decrypt
+    decrypt,
+    hash
 };
