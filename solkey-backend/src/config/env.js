@@ -16,13 +16,18 @@ for (const envVar of requiredEnvVars) {
 
 const config = {
     nodeEnv: process.env.NODE_ENV || 'development',
-    port: process.env.PORT || 3000,
-    mongodb: {
-        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/solkey',
+    port: parseInt(process.env.PORT || '4000'),  // Always use port 4000 unless explicitly set
+    mongodb: {        uri: process.env.MONGODB_URI || 'mongodb://admin:adminpassword@localhost:27017/solkey?authSource=admin',
         options: {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-            serverSelectionTimeoutMS: process.env.NODE_ENV === 'test' ? 1000 : 30000
+            serverSelectionTimeoutMS: process.env.NODE_ENV === 'test' ? 1000 : 30000,
+            retryWrites: true,
+            w: 'majority',
+            maxPoolSize: 50,
+            minPoolSize: 10,
+            maxIdleTimeMS: 30000,
+            socketTimeoutMS: 45000,
+            connectTimeoutMS: 10000,
+            authSource: 'admin'
         }
     },
     jwt: {
@@ -32,7 +37,7 @@ const config = {
     cors: {
         allowedOrigins: process.env.ALLOWED_ORIGINS ? 
             process.env.ALLOWED_ORIGINS.split(',') : 
-            ['http://localhost:3000'],
+            ['http://localhost:5173', 'http://localhost:3000'],
         maxAge: 86400
     },
     rateLimit: {

@@ -7,8 +7,6 @@ async function testConnection() {
         
         // Connect to MongoDB
         await mongoose.connect(process.env.MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             serverSelectionTimeoutMS: 5000
         });
 

@@ -1,6 +1,4 @@
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const GitHubStrategy = require('passport-github2').Strategy;
 const User = require('../models/user.model');
 const config = require('./auth');
 
@@ -16,31 +14,39 @@ async function findOrCreateUser(profile) {
     return user;
 }
 
-passport.use(new GoogleStrategy({
-    clientID: config.oauth.google.clientId,
-    clientSecret: config.oauth.google.clientSecret,
-    callbackURL: config.oauth.google.callbackURL
-}, async (_, __, profile, done) => {
-    try {
-        const user = await findOrCreateUser(profile);
-        return done(null, user);
-    } catch (error) {
-        return done(error, null);
-    }
-}));
+// Only set up OAuth strategies if credentials are configured
+if (config.oauth?.google?.clientId && config.oauth?.google?.clientSecret) {
+    const GoogleStrategy = require('passport-google-oauth20').Strategy;
+    passport.use(new GoogleStrategy({
+        clientID: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        callbackURL: config.oauth.google.callbackURL
+    }, async (_, __, profile, done) => {
+        try {
+            const user = await findOrCreateUser(profile);
+            return done(null, user);
+        } catch (error) {
+            return done(error, null);
+        }
+    }));
+}
 
-passport.use(new GitHubStrategy({
-    clientID: config.oauth.github.clientId,
-    clientSecret: config.oauth.github.clientSecret,
-    callbackURL: config.oauth.github.callbackURL
-}, async (_, __, profile, done) => {
-    try {
-        const user = await findOrCreateUser(profile);
-        return done(null, user);
-    } catch (error) {
-        return done(error, null);
-    }
-}));
+// Only set up GitHub strategy if credentials are configured
+if (config.oauth?.github?.clientId && config.oauth?.github?.clientSecret) {
+    const GitHubStrategy = require('passport-github2').Strategy;
+    passport.use(new GitHubStrategy({
+        clientID: config.oauth.github.clientId,
+        clientSecret: config.oauth.github.clientSecret,
+        callbackURL: config.oauth.github.callbackURL
+    }, async (_, __, profile, done) => {
+        try {
+            const user = await findOrCreateUser(profile);
+            return done(null, user);
+        } catch (error) {
+            return done(error, null);
+        }
+    }));
+}
 
 passport.serializeUser((user, done) => done(null, user.id));
 

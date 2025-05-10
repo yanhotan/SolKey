@@ -12,10 +12,7 @@ async function testModels() {
   try {
     // Connect to MongoDB with updated options
     console.log('Connecting to MongoDB...');
-    mongoose.set('strictQuery', true);
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+    mongoose.set('strictQuery', true);    await mongoose.connect(process.env.MONGODB_URI, {
       autoIndex: true,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,

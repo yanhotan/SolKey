@@ -15,11 +15,7 @@ module.exports = async () => {
     process.env.RATE_LIMIT_WINDOW = '1';
     process.env.RATE_LIMIT_MAX = '60';
 
-    // Connect to the in-memory database
-    await mongoose.connect(uri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-    });
+    // Connect to the in-memory database    await mongoose.connect(uri);
 
     // Clean up function
     global.__MONGOD__ = mongod;

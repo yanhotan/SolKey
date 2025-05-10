@@ -5,6 +5,14 @@ const config = require('../config/env');
 const { AppError } = require('../middleware/error.middleware');
 
 class EncryptionService {
+    static _instance = null;
+
+    static getInstance() {
+        if (!EncryptionService._instance) {
+            EncryptionService._instance = new EncryptionService();
+        }
+        return EncryptionService._instance;
+    }
     constructor() {
         if (!webcrypto || !webcrypto.subtle) {
             throw new Error('Web Crypto API not supported');
@@ -146,4 +154,5 @@ class EncryptionService {
     }
 }
 
-module.exports = new EncryptionService();
+// Export a singleton instance
+module.exports = EncryptionService.getInstance();

@@ -59,10 +59,19 @@ db.createCollection("projects", {
     validator: {
         $jsonSchema: {
             bsonType: "object",
-            required: ["name", "owner"],
+            required: ["name"],
             properties: {
                 name: { bsonType: "string" },
-                owner: { bsonType: "objectId" }
+                description: { bsonType: ["string", "null"] },
+                environments: { 
+                    bsonType: "array",
+                    items: { 
+                        oneOf: [
+                            { bsonType: "string" },
+                            { bsonType: "objectId" }
+                        ]
+                    }
+                }
             }
         }
     }
@@ -99,10 +108,10 @@ db.createCollection("secrets", {
     }
 });
 
-// Create indexes
+// Create indices
 db.users.createIndex({ "email": 1 }, { unique: true });
 db.users.createIndex({ "walletAddress": 1 }, { unique: true, sparse: true });
-db.projects.createIndex({ "owner": 1, "name": 1 }, { unique: true });
+db.projects.createIndex({ "name": "text", "description": "text" });
 db.environments.createIndex({ "projectId": 1, "name": 1 }, { unique: true });
 db.secrets.createIndex({ "environmentId": 1, "key": 1 }, { unique: true });
 

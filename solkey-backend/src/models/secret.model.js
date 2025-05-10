@@ -10,6 +10,14 @@ const secretSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  nonce: {
+    type: String,
+    required: true
+  },
+  walletSignature: {
+    type: String,
+    required: false
+  },
   environmentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Environment',

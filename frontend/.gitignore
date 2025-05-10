@@ -1,0 +1,64 @@
+# dependencies
+/node_modules
+**/node_modules
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# next.js
+.next/
+out/
+next-env.d.ts
+
+# environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# build output
+/dist
+/build
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# testing
+/coverage
+.nyc_output
+
+# misc
+.DS_Store
+*.pem
+.cache
+*.bak
+*.tmp
+*.swp
+*~
+
+# debug
+.debug/
+debug.log
+
+# local files
+*.local
+
+# Large media files
+*.mp4
+*.tiff
+*.avi
+*.flv
+*.mov
+*.wmv

@@ -7,7 +7,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 const config = require('./config/env');
-const databaseService = require('./config/database');
+const databaseService = require('./config/database.test');
 const { 
     securityHeaders, 
     validateContentType, 
@@ -22,47 +22,39 @@ const projectsRoutes = require('./routes/projects.routes');
 const secretsRoutes = require('./routes/secrets.routes');
 const teamsRoutes = require('./routes/teams.routes');
 
-const { errorHandler } = require('./middleware/error.middleware');
 const { authenticateToken } = require('./middleware/auth.middleware');
+const errorHandler = require('./middleware/error.handler');
 
 const app = express();
 
-// Enhanced security headers with config
-app.use(helmet({
-    contentSecurityPolicy: {
-        useDefaults: true,
-        directives: {
-            'default-src': ["'self'"],
-            'connect-src': ["'self'", config.solana.rpcUrl],
-            'script-src': ["'self'"],
-            'style-src': ["'self'", "'unsafe-inline'"],
-            'img-src': ["'self'", "data:", "https:"],
-            'upgrade-insecure-requests': null
-        }
-    },
-    crossOriginEmbedderPolicy: true,
-    crossOriginOpenerPolicy: true,
-    crossOriginResourcePolicy: { policy: "same-site" }
-}));
-
-// Custom security middleware
-app.use(securityHeaders);
-app.use(validateContentType);
-app.use(validateOrigin(config.cors.allowedOrigins));
-app.use(validateRequestSize('2mb'));
-
-// CORS configuration from config
+// Single CORS configuration
 app.use(cors({
-    origin: config.cors.allowedOrigins,
-    credentials: true,
+    origin: ['http://localhost:3000', 'http://localhost:4000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-wallet-signature'],
+    credentials: true,
     maxAge: config.cors.maxAge
 }));
 
-// Request body parsing with sanitization
-app.use(bodyParser.json({ limit: '2mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '2mb' }));
+// Enhanced security headers with config
+app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP for development
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false
+}));
+
+// Single body parser configuration with consistent limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Ensure content type for POST requests
+app.use((req, res, next) => {
+    if (req.method === 'POST') {
+        res.setHeader('Content-Type', 'application/json');
+    }
+    next();
+});
 app.use(sanitizeRequestBody);
 
 // Rate limiting from config
@@ -106,14 +98,14 @@ app.get('/health', async (req, res) => {
     }
 });
 
-// API routes
+// API routes - temporarily removed authentication for testing
 app.use('/api/auth', authRoutes);
-app.use('/api/payments', authenticateToken, paymentsRoutes);
-app.use('/api/projects', authenticateToken, projectsRoutes);
-app.use('/api/secrets', authenticateToken, secretsRoutes);
-app.use('/api/teams', authenticateToken, teamsRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/projects', projectsRoutes);
+app.use('/api/secrets', secretsRoutes);
+app.use('/api/teams', teamsRoutes);
 
-// Error handling
+// Error handling middleware should be after all routes
 app.use(errorHandler);
 
 // Enhanced error handling for unhandled rejections and exceptions

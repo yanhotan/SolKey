@@ -35,16 +35,35 @@ const projectSchema = new mongoose.Schema({
     name: {
         type: String,
         required: true,
-        trim: true
+        trim: true,
+        maxlength: 100,
+        unique: true
     },
     description: {
         type: String,
-        default: ''
+        default: '',
+        trim: true,
+        maxlength: 500
+    },
+    nonce: {
+        type: String,
+        required: false
+    },    walletSignature: {
+        type: String,
+        required: false, // Changed to false since we want to allow projects without signatures initially
+        trim: true,
+        validate: {
+            validator: function(v) {
+                // Allow undefined/null but if present must be at least 32 chars
+                return !v || v.length >= 32;
+            },
+            message: 'Wallet signature if provided must be at least 32 characters long'
+        }
     },
     owner: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: false
     },
     environments: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -67,13 +86,22 @@ const projectSchema = new mongoose.Schema({
         default: false
     }
 }, {
-    timestamps: true,
-    optimisticConcurrency: true
+    timestamps: true
 });
 
-// Index for better query performance
-projectSchema.index({ owner: 1, name: 1 }, { unique: true });
+// Add text search index for name and description
 projectSchema.index({ name: 'text', description: 'text' });
+
+// Add unique index for project name
+projectSchema.index({ name: 1 }, { unique: true });
+
+// Pre-save middleware to trim strings
+projectSchema.pre('save', function(next) {
+    if (this.name) this.name = this.name.trim();
+    if (this.description) this.description = this.description.trim();
+    if (this.walletSignature) this.walletSignature = this.walletSignature.trim();
+    next();
+});
 
 const Project = mongoose.model('Project', projectSchema);
 module.exports = Project;

@@ -36,52 +36,37 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
-
+      start_period: 5s    
   mongodb:
     image: mongo:6
     container_name: solkey-mongodb
-    restart: unless-stopped
+    restart: unless-stopped      
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
-      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE:-solkey}
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=adminpassword
+      - MONGO_INITDB_DATABASE=solkey    
     volumes:
       - mongodb_data:/data/db
+      - ./mongodb-keyfile:/tmp/mongodb-keyfile:ro
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    command: mongod --auth --replSet rs0 --keyFile /tmp/mongodb-keyfile --bind_ip_all
+    user: mongodb
     networks:
       - app-network
     deploy:
       resources:
         limits:
           cpus: '2'
-          memory: 4G
+          memory: '4G'
         reservations:
           cpus: '1'
-          memory: 2G
-    command: ["--auth", "--bind_ip_all", "--replSet", "rs0"]
+          memory: '2G'
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 30s
-      timeout: 10s
+      test: mongosh --eval "db.adminCommand('ping').ok"
+      interval: 10s
+      timeout: 5s
       retries: 3
       start_period: 10s
-
-  mongo-init:
-    image: mongo:6
-    container_name: solkey-mongo-init
-    depends_on:
-      mongodb:
-        condition: service_healthy
-    command: >
-      mongosh --host mongodb:27017 --eval '
-        rs.initiate({
-          _id: "rs0",
-          members: [{ _id: 0, host: "mongodb:27017" }]
-        });
-      '
-    networks:
-      - app-network
 
 networks:
   app-network:
@@ -90,7 +75,6 @@ networks:
       driver: default
       config:
         - subnet: 172.20.0.0/16
-
 volumes:
   mongodb_data:
     driver: local

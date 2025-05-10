@@ -63,12 +63,28 @@ const validateOrigin = (allowedOrigins) => {
 };
 
 const sanitizeRequestBody = (req, res, next) => {
-    if (req.body) {
-        // Remove any potential NoSQL injection characters
-        const sanitized = JSON.parse(
-            JSON.stringify(req.body).replace(/[${}]/g, '')
-        );
-        req.body = sanitized;
+    if (req.body && typeof req.body === 'object') {
+        // Remove any potential NoSQL injection characters from object keys and string values
+        const sanitizeObject = (obj) => {
+            if (Array.isArray(obj)) {
+                return obj.map(item => sanitizeObject(item));
+            }
+            if (obj && typeof obj === 'object') {
+                return Object.keys(obj).reduce((acc, key) => {
+                    // Sanitize the key
+                    const sanitizedKey = key.replace(/[${}]/g, '');
+                    // Recursively sanitize the value
+                    acc[sanitizedKey] = sanitizeObject(obj[key]);
+                    return acc;
+                }, {});
+            }
+            if (typeof obj === 'string') {
+                return obj.replace(/[${}]/g, '');
+            }
+            return obj;
+        };
+
+        req.body = sanitizeObject(req.body);
     }
     next();
 };

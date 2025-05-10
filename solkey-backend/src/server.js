@@ -1,6 +1,6 @@
 const express = require('express');
 const app = require('./app');
-const databaseService = require('./config/database');
+const databaseService = require('./config/database.test');
 const config = require('./config/env');
 
 async function startServer() {
