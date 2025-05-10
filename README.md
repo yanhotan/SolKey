@@ -1,4 +1,4 @@
-# SolKey Project Setup Guide
+# SolSecure Project Setup Guide
 
 This is a full-stack application with a Next.js frontend and Node.js backend. The project uses MongoDB for data storage and includes Solana wallet integration.
 
