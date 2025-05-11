@@ -25,7 +25,7 @@ solsecure/
 
 ```powershell
 git clone <repository-url>
-cd solkey
+cd solsecure
 ```
 
 ### 2. Frontend Setup
