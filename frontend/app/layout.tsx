@@ -9,8 +9,8 @@ const inter = Inter({ subsets: ["latin"] })
 
 // Update the title and description
 export const metadata: Metadata = {
-  title: "SolSecure - Secrets Management for Solana Developers",
-  description: "Manage your environment variables across different environments with Solana integration",
+  title: "SolSecure - Lock Down Your Secrets. Only Your Solana Wallet Holds the Key",
+  description: "SolSecure protects your API keys and environment variables with end-to-end encryption tied to your Solana wallet — no passwords, no leaks, no compromises. Just pure, wallet-based control.",
     generator: 'v0.dev'
 }
 

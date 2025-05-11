@@ -17,11 +17,10 @@ export function LandingHero() {
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl lg:text-7xl bg-clip-text text-transparent bg-gradient-to-r from-purple-500 via-blue-500 to-purple-500">
-            Secrets Management for Solana Developers
+            Lock Down Your Secrets. Only Your Wallet Holds the Key
           </h1>
           <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
-            Securely manage your environment variables across different environments with Solana blockchain integration
-            for payments.
+            SolSecure protects your API keys and environment variables with end-to-end encryption tied to your Solana wallet — no passwords, no leaks, no compromises. Just pure, wallet-based control.
           </p>
         </motion.div>
         <motion.div
