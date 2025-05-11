@@ -1,1 +1,3 @@
 aborted-frontend/
+.env*.local
+.env.local
