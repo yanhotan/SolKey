@@ -1,0 +1,39 @@
+/* Override wallet adapter dropdown styles */
+.wallet-adapter-dropdown {
+  position: relative;
+}
+
+.wallet-adapter-dropdown-list {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  margin: 0;
+  padding: 4px;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  list-style: none;
+  z-index: 50;
+}
+
+.wallet-adapter-dropdown-list-item {
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+/* Only show Phantom and Solflare options */
+.wallet-adapter-dropdown-list-item:not([data-wallet="Phantom"]):not([data-wallet="Solflare"]) {
+  display: none;
+}
+
+.wallet-adapter-dropdown-list-item:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}

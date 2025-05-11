@@ -8,7 +8,7 @@ const encryptionService = require('../../services/encryption.service');
 
 describe('Wallet Integration Tests', () => {
     let keypair;
-    const TEST_MESSAGE = 'SolKey Authentication';
+    const TEST_MESSAGE = 'SolSecure Authentication';
 
     beforeEach(() => {
         // Generate a new Solana keypair for each test

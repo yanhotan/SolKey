@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,62 +10,19 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Github } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useToast } from "@/hooks/use-toast"
 
 export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-  })
   const router = useRouter()
-  const { toast } = useToast()
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target
-    setFormData(prev => ({ ...prev, [id]: value }))
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-
-    try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed')
-      }
-
-      // Store the token
-      localStorage.setItem('authToken', data.token)
-      // Store user info
-      localStorage.setItem('user', JSON.stringify(data.user))
-
-      toast({
-        title: "Success",
-        description: "Account created successfully",
-      })
-
-      router.push("/dashboard")
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : 'Failed to create account',
-        variant: "destructive",
-      })
-    } finally {
+    // Simulate API call
+    setTimeout(() => {
       setIsLoading(false)
-    }
+      router.push("/dashboard")
+    }, 1500)
   }
 
   return (
@@ -108,35 +66,15 @@ export function SignupForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">Full Name</Label>
-          <Input
-            id="name"
-            type="text"
-            placeholder="John Doe"
-            required
-            value={formData.name}
-            onChange={handleChange}
-          />
+          <Input id="name" type="text" placeholder="John Doe" required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            placeholder="m@example.com"
-            required
-            value={formData.email}
-            onChange={handleChange}
-          />
+          <Input id="email" type="email" placeholder="m@example.com" required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            required
-            value={formData.password}
-            onChange={handleChange}
-          />
+          <Input id="password" type="password" required />
         </div>
         <div className="flex items-center space-x-2">
           <Checkbox id="terms" required />

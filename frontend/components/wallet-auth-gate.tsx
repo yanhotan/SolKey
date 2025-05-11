@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import "@solana/wallet-adapter-react-ui/styles.css"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Wallet, AlertCircle, Shield, Check } from "lucide-react"
+import { AlertCircle, Shield, Check } from "lucide-react"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
 
 interface WalletAuthGateProps {
@@ -15,14 +16,18 @@ interface WalletAuthGateProps {
 }
 
 export function WalletAuthGate({ children }: WalletAuthGateProps) {
-  const { connected } = useWallet();
-  const { isInitialized, handleSignMessage, error } = useWalletEncryption();
+  const { connected } = useWallet()
+  const { isInitialized, handleSignMessage, error } = useWalletEncryption()
+  const [initializationError, setInitializationError] = useState<string | null>(null)
 
   useEffect(() => {
     if (connected && !isInitialized) {
-      handleSignMessage().catch(console.error);
+      handleSignMessage().catch((err: unknown) => {
+        console.error('Failed to initialize encryption:', err)
+        setInitializationError(err instanceof Error ? err.message : 'Failed to initialize encryption')
+      })
     }
-  }, [connected, isInitialized, handleSignMessage]);
+  }, [connected, isInitialized, handleSignMessage])
 
   if (!connected) {
     return (
@@ -30,18 +35,20 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
         <h1 className="text-2xl font-bold mb-4">Connect Your Wallet</h1>
         <WalletMultiButton />
       </div>
-    );
+    )
   }
 
   if (!isInitialized) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h1 className="text-2xl font-bold mb-4">Initializing Encryption...</h1>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
+        {(error || initializationError) && (
+          <p className="text-red-500 mb-4">{error || initializationError}</p>
+        )}
         <p>Please sign the message in your wallet to continue.</p>
       </div>
-    );
+    )
   }
 
-  return <>{children}</>;
+  return <>{children}</>
 }

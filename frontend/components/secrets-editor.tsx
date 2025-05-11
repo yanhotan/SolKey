@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,136 +8,77 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Textarea } from "@/components/ui/textarea"
 import { Lock, Save, AlertCircle, Shield } from "lucide-react"
+import { encryptData, decryptData } from "@/lib/wallet-auth"
 import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
-import { useToast } from "@/hooks/use-toast"
+import type { EncryptedData } from "@/lib/crypto"
 
-interface EncryptedSecret {
+interface Secret {
   id: string
   key: string
-  encryptedData: {
-    encrypted: string
-    nonce: string
-    authHash: string
-  }
-  decryptedValue?: string
+  encryptedValue: EncryptedData
 }
 
-interface SecretsEditorProps {
-  projectId: string
-  environment: string
-  searchQuery: string
-}
-
-export function SecretsEditor({ projectId, environment, searchQuery }: SecretsEditorProps) {
-  const [secrets, setSecrets] = useState<EncryptedSecret[]>([])
+export function SecretsEditor({ environment }: { environment: string }) {
+  const [secrets, setSecrets] = useState<Secret[]>([])
   const [newKey, setNewKey] = useState("")
   const [newValue, setNewValue] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const { encryptData, decryptData } = useWalletEncryption()
-  const { toast } = useToast()
-
-  // Load secrets from API
-  useEffect(() => {
-    const loadSecrets = async () => {
-      try {
-        const response = await fetch(`/api/secrets?projectId=${projectId}&environment=${environment}`)
-        if (!response.ok) {
-          throw new Error('Failed to load secrets')
-        }
-        const data = await response.json()
-        setSecrets(data)
-      } catch (error) {
-        console.error('Error loading secrets:', error)
-        toast({
-          title: "Error Loading Secrets",
-          description: "Failed to load secrets. Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadSecrets()
-  }, [projectId, environment, toast])
-
-  // Filter secrets based on search query
-  const filteredSecrets = secrets.filter(secret =>
-    secret.key.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const { isInitialized, encryptData, decryptData } = useWalletEncryption()
 
   const addSecret = async () => {
+    if (!isInitialized) {
+      setError("Please connect and authorize your wallet first")
+      return
+    }
+
     if (!newKey.trim() || !newValue.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Both key and value are required",
-        variant: "destructive",
-      })
+      setError("Both key and value are required")
       return
     }
 
     try {
-      const encryptedData = await encryptData(newValue)
-      
-      const newSecret: EncryptedSecret = {
+      // Encrypt the value before storing
+      const encryptedValue = await encryptData(newValue)
+
+      const newSecret: Secret = {
         id: crypto.randomUUID(),
-        key: newKey.trim(),
-        encryptedData,
+        key: newKey,
+        encryptedValue,
       }
 
-      const response = await fetch('/api/secrets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newSecret,
-          projectId,
-          environment,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to save secret')
-      }
-
-      const savedSecret = await response.json()
-      setSecrets([...secrets, savedSecret])
+      setSecrets([...secrets, newSecret])
       setNewKey("")
       setNewValue("")
+      setSuccess("Secret added successfully")
+      setError(null)
 
-      toast({
-        title: "Success",
-        description: "Secret added successfully",
-      })
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      console.error('Error adding secret:', err)
-      toast({
-        title: "Error",
-        description: "Failed to add secret",
-        variant: "destructive",
-      })
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError("Failed to encrypt secret")
+      }
     }
   }
 
-  const decryptSecret = async (secret: EncryptedSecret) => {
+  const viewSecret = async (encryptedValue: EncryptedData) => {
+    if (!isInitialized) {
+      return "**Please connect your wallet**"
+    }
+
     try {
-      const decrypted = await decryptData(secret.encryptedData)
-      setSecrets(secrets.map(s => 
-        s.id === secret.id 
-          ? { ...s, decryptedValue: decrypted } 
-          : s
-      ))
+      const decrypted = await decryptData(encryptedValue)
+      if (!decrypted) {
+        throw new Error('Decryption failed')
+      }
+      return decrypted
     } catch (err) {
-      console.error('Error decrypting secret:', err)
-      toast({
-        title: "Decryption Error",
-        description: "Failed to decrypt the secret. Please check your wallet connection.",
-        variant: "destructive",
-      })
+      console.error('Failed to decrypt secret:', err)
+      return "**Failed to decrypt**"
     }
-  }
-
-  if (isLoading) {
-    return <div className="p-4">Loading secrets...</div>
   }
 
   return (
@@ -145,99 +86,76 @@ export function SecretsEditor({ projectId, environment, searchQuery }: SecretsEd
       <Card>
         <CardHeader>
           <CardTitle>Add New Secret</CardTitle>
-          <CardDescription>
-            Enter a key and value for your new secret. The value will be encrypted before storage.
-          </CardDescription>
+          <CardDescription>Add a new secret to the {environment} environment</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+              <Shield className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <AlertTitle>Success</AlertTitle>
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
-            <Label htmlFor="key">Secret Key</Label>
+            <Label htmlFor="secret-key">Secret Key</Label>
             <Input
-              id="key"
+              id="secret-key"
+              placeholder="e.g., API_KEY, DATABASE_URL"
               value={newKey}
               onChange={(e) => setNewKey(e.target.value)}
-              placeholder="Enter secret key"
             />
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="value">Secret Value</Label>
+            <Label htmlFor="secret-value">Secret Value</Label>
             <Textarea
-              id="value"
+              id="secret-value"
+              placeholder="Enter the secret value"
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
-              placeholder="Enter secret value"
+              rows={3}
             />
+            <p className="text-xs text-muted-foreground">This value will be encrypted using your wallet-derived key</p>
           </div>
         </CardContent>
         <CardFooter>
           <Button onClick={addSecret} className="w-full">
-            <Lock className="w-4 h-4 mr-2" />
+            <Save className="mr-2 h-4 w-4" />
             Add Secret
           </Button>
         </CardFooter>
       </Card>
 
-      <div className="space-y-4">
-        {filteredSecrets.map((secret) => (
-          <Card key={secret.id}>
-            <CardHeader>
-              <CardTitle>{secret.key}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Encrypted Data</Label>
-                <div className="bg-muted p-2 rounded">
-                  <code className="text-sm font-mono break-all">
-                    {secret.encryptedData.encrypted}
-                  </code>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Encryption Details</Label>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="font-semibold">Nonce:</span>
-                    <div className="bg-muted p-1 rounded">
-                      <code className="font-mono break-all text-xs">
-                        {secret.encryptedData.nonce}
-                      </code>
-                    </div>
+      {secrets.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Secrets</CardTitle>
+            <CardDescription>These secrets are encrypted with your wallet-derived key</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {secrets.map((secret) => (
+                <div key={secret.id} className="rounded-lg border p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lock className="h-4 w-4 text-purple-500" />
+                    <span className="font-medium">{secret.key}</span>
                   </div>
-                  <div>
-                    <span className="font-semibold">Auth Hash:</span>
-                    <div className="bg-muted p-1 rounded">
-                      <code className="font-mono break-all text-xs">
-                        {secret.encryptedData.authHash}
-                      </code>
-                    </div>
-                  </div>
+                  <div className="font-mono text-sm bg-muted p-2 rounded">{viewSecret(secret.encryptedValue)}</div>
                 </div>
-              </div>
-
-              {secret.decryptedValue ? (
-                <div className="space-y-2">
-                  <Label>Decrypted Value</Label>
-                  <div className="bg-muted p-2 rounded border border-green-500">
-                    <code className="text-sm font-mono break-all">
-                      {secret.decryptedValue}
-                    </code>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  onClick={() => decryptSecret(secret)}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <Shield className="w-4 h-4 mr-2" />
-                  Decrypt Value
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

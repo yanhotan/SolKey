@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="jest tests" tests="12" failures="0" errors="0" time="6.139">
-  <testsuite name="SolKey Integration Tests" errors="0" failures="0" skipped="0" timestamp="2025-05-09T09:15:13" time="5.189" tests="12">
-    <testcase classname="SolKey Integration Tests User Authentication &amp; Wallet Integration should register user and connect wallet" name="SolKey Integration Tests User Authentication &amp; Wallet Integration should register user and connect wallet" time="0.498">
+  <testsuite name="SolSecure Integration Tests" errors="0" failures="0" skipped="0" timestamp="2025-05-09T09:15:13" time="5.189" tests="12">
+    <testcase classname="SolSecure Integration Tests User Authentication &amp; Wallet Integration should register user and connect wallet" name="SolSecure Integration Tests User Authentication &amp; Wallet Integration should register user and connect wallet" time="0.498">
     </testcase>
-    <testcase classname="SolKey Integration Tests User Authentication &amp; Wallet Integration should derive AES key from wallet and encrypt secrets" name="SolKey Integration Tests User Authentication &amp; Wallet Integration should derive AES key from wallet and encrypt secrets" time="0.348">
+    <testcase classname="SolSecure Integration Tests User Authentication &amp; Wallet Integration should derive AES key from wallet and encrypt secrets" name="SolSecure Integration Tests User Authentication &amp; Wallet Integration should derive AES key from wallet and encrypt secrets" time="0.348">
     </testcase>
-    <testcase classname="SolKey Integration Tests User Authentication &amp; Wallet Integration should prevent access to secrets after wallet desync" name="SolKey Integration Tests User Authentication &amp; Wallet Integration should prevent access to secrets after wallet desync" time="0.195">
+    <testcase classname="SolSecure Integration Tests User Authentication &amp; Wallet Integration should prevent access to secrets after wallet desync" name="SolSecure Integration Tests User Authentication &amp; Wallet Integration should prevent access to secrets after wallet desync" time="0.195">
     </testcase>
-    <testcase classname="SolKey Integration Tests Project Management should create project with default environments" name="SolKey Integration Tests Project Management should create project with default environments" time="0.175">
+    <testcase classname="SolSecure Integration Tests Project Management should create project with default environments" name="SolSecure Integration Tests Project Management should create project with default environments" time="0.175">
     </testcase>
-    <testcase classname="SolKey Integration Tests Project Management should edit project details" name="SolKey Integration Tests Project Management should edit project details" time="0.193">
+    <testcase classname="SolSecure Integration Tests Project Management should edit project details" name="SolSecure Integration Tests Project Management should edit project details" time="0.193">
     </testcase>
-    <testcase classname="SolKey Integration Tests Project Management should delete project and cascade environments" name="SolKey Integration Tests Project Management should delete project and cascade environments" time="0.23">
+    <testcase classname="SolSecure Integration Tests Project Management should delete project and cascade environments" name="SolSecure Integration Tests Project Management should delete project and cascade environments" time="0.23">
     </testcase>
-    <testcase classname="SolKey Integration Tests Team Management should invite team member" name="SolKey Integration Tests Team Management should invite team member" time="0.297">
+    <testcase classname="SolSecure Integration Tests Team Management should invite team member" name="SolSecure Integration Tests Team Management should invite team member" time="0.297">
     </testcase>
-    <testcase classname="SolKey Integration Tests Team Management should handle change requests" name="SolKey Integration Tests Team Management should handle change requests" time="0.321">
+    <testcase classname="SolSecure Integration Tests Team Management should handle change requests" name="SolSecure Integration Tests Team Management should handle change requests" time="0.321">
     </testcase>
-    <testcase classname="SolKey Integration Tests Team Management should remove team member" name="SolKey Integration Tests Team Management should remove team member" time="0.289">
+    <testcase classname="SolSecure Integration Tests Team Management should remove team member" name="SolSecure Integration Tests Team Management should remove team member" time="0.289">
     </testcase>
-    <testcase classname="SolKey Integration Tests Environment Management should create custom environment (pro plan)" name="SolKey Integration Tests Environment Management should create custom environment (pro plan)" time="0.241">
+    <testcase classname="SolSecure Integration Tests Environment Management should create custom environment (pro plan)" name="SolSecure Integration Tests Environment Management should create custom environment (pro plan)" time="0.241">
     </testcase>
-    <testcase classname="SolKey Integration Tests Environment Management should prevent custom environment creation (free plan)" name="SolKey Integration Tests Environment Management should prevent custom environment creation (free plan)" time="0.21">
+    <testcase classname="SolSecure Integration Tests Environment Management should prevent custom environment creation (free plan)" name="SolSecure Integration Tests Environment Management should prevent custom environment creation (free plan)" time="0.21">
     </testcase>
-    <testcase classname="SolKey Integration Tests Environment Management should manage environment secrets" name="SolKey Integration Tests Environment Management should manage environment secrets" time="0.241">
+    <testcase classname="SolSecure Integration Tests Environment Management should manage environment secrets" name="SolSecure Integration Tests Environment Management should manage environment secrets" time="0.241">
     </testcase>
   </testsuite>
 </testsuites>

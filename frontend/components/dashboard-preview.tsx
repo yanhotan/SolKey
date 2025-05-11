@@ -24,7 +24,14 @@ import {
 
 export function DashboardPreview() {
   const [activeTab, setActiveTab] = useState("development")
-  // Removed secret visibility toggle since we're always showing raw values
+  const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({})
+
+  const toggleSecretVisibility = (id: string) => {
+    setVisibleSecrets((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }))
+  }
 
   // Sample secrets data
   const secrets = [
@@ -204,7 +211,14 @@ export function DashboardPreview() {
 
           {/* Action buttons */}
           <div className="mb-6 flex flex-wrap gap-2">
-            {/* Removed Reveal/Hide All buttons since values are always shown */}
+            <div className="rounded-md bg-muted/50 px-3 py-1.5 text-xs font-medium flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              <span>Reveal All</span>
+            </div>
+            <div className="rounded-md bg-muted/50 px-3 py-1.5 text-xs font-medium flex items-center gap-1">
+              <EyeOff className="h-3 w-3" />
+              <span>Hide All</span>
+            </div>
             <div className="rounded-md bg-muted/50 px-3 py-1.5 text-xs font-medium flex items-center gap-1">
               <Copy className="h-3 w-3" />
               <span>Copy as .env</span>
@@ -228,7 +242,17 @@ export function DashboardPreview() {
                 <div className="col-span-3 font-medium font-mono">{secret.key}</div>
                 <div className="col-span-6 flex items-center gap-2">
                   <div className="font-mono text-xs">
-                    {secret.value}
+                    {visibleSecrets[secret.id] ? (
+                      secret.value
+                    ) : (
+                      <span className="text-muted-foreground">••••••••••••••••••••••••••</span>
+                    )}
+                  </div>
+                  <div
+                    className="flex h-6 w-6 items-center justify-center rounded-md bg-muted/50 cursor-pointer"
+                    onClick={() => toggleSecretVisibility(secret.id)}
+                  >
+                    {visibleSecrets[secret.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                   </div>
                   <div className="flex h-6 w-6 items-center justify-center rounded-md bg-muted/50 cursor-pointer">
                     <Copy className="h-3 w-3" />

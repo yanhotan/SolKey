@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ConnectWalletButton } from "@/components/connect-wallet-button"
+import { ConnectWalletButton } from "@/components/connect-wallet-wallet-button"
 import Link from "next/link"
 
 export function DashboardHeader() {

@@ -7,7 +7,7 @@ const encryptionService = require('../services/encryption.service');
 
 describe('Wallet Integration Tests', () => {
     let keypair;
-    const message = 'Welcome to SolKey! Sign this message to secure your secrets with your Phantom wallet.';
+    const message = 'Welcome to SolSecure! Sign this message to secure your secrets with your Phantom wallet.';
 
     beforeEach(() => {
         // Generate a new Solana keypair for each test

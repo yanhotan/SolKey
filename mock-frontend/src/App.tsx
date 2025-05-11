@@ -38,7 +38,7 @@ const App: FC = () => {
           <WalletModalProvider>
             <Container maxW="container.md" py={8}>
               <Stack direction="column" gap={8} align="stretch">
-                <Heading>SolKey Wallet Test</Heading>
+                <Heading>SolSecure Wallet Test</Heading>
                 <WalletConnection />
                 <EncryptionTest />
               </Stack>

@@ -14,7 +14,7 @@ const config = {
         }
     },
     walletAuth: {
-        signatureMessage: 'Welcome to SolKey! Sign this message to secure your secrets.',
+        signatureMessage: 'Welcome to SolSecure! Sign this message to secure your secrets.',
         signatureExpiry: '5m'
     }
 };

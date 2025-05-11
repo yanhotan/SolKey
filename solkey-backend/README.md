@@ -2,7 +2,7 @@
 
 # SolKey Backend
 
-SolKey is a secrets management platform that provides secure storage and management of sensitive information. This backend application is built using Node.js and Express, and it integrates with various services for authentication, payment processing, and project management.
+SolSecure is a secrets management platform that provides secure storage and management of sensitive information. This backend application is built using Node.js and Express, and it integrates with various services for authentication, payment processing, and project management.
 
 ## Features
 

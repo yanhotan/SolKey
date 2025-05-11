@@ -8,7 +8,6 @@ import { Search, Plus, Eye, EyeOff, Copy, Download, Upload, Trash2, Lock, X } fr
 import { SecretsTable } from "@/components/secrets-table"
 import { SecretsEditor } from "@/components/secrets-editor"
 import { Card, CardContent } from "@/components/ui/card"
-import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
   DialogContent,
@@ -30,271 +29,336 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-type Project = {
-  id: string;
-  name: string;
-  description: string;
-  environments: string[];
-  teamMembers: number;
-  createdAt: string;
-  updatedAt: string;
+interface Secret {
+  name: string
+  locked: boolean
+}
+
+interface EnvConfig {
+  configs: number
+  secrets: Secret[]
+}
+
+interface ProjectSecrets {
+  [key: string]: EnvConfig
+}
+
+interface Project {
+  id: string
+  name: string
+  description: string
+  environments: string[]
+  members: number
+  updatedAt: string
+  status: 'active' | 'inactive'
+  secrets: ProjectSecrets
+}
+
+interface MockProjects {
+  [key: string]: Project
 }
 
 export function ProjectDetail({ id }: { id: string }) {
+  // Mock project data - using the same data structure as projects-list
+  const mockProjects: MockProjects = {
+    "1": {
+      id: "1",
+      name: "Backend API",
+      description: "Main backend API service with authentication and core services",
+      environments: ["development", "staging", "production"],
+      members: 5,
+      updatedAt: "2 hours ago",
+      status: "active",
+      secrets: {
+        development: {
+          configs: 3,
+          secrets: [
+            { name: "dev_api_key", locked: true },
+            { name: "dev_db_url", locked: true },
+            { name: "dev_jwt_secret", locked: true }
+          ]
+        },
+        staging: {
+          configs: 3,
+          secrets: [
+            { name: "stg_api_key", locked: true },
+            { name: "stg_db_url", locked: true }
+          ]
+        },
+        production: {
+          configs: 3,
+          secrets: [
+            { name: "prd_api_key", locked: true },
+            { name: "prd_db_url", locked: true }
+          ]
+        }
+      }
+    }
+  }
+
+  const project = mockProjects[id] || {
+    id,
+    name: "New Project",
+    description: "Project details not found",
+    environments: ["development"],
+    members: 0,
+    updatedAt: "Unknown",
+    status: "inactive" as const,
+    secrets: {
+      development: {
+        configs: 0,
+        secrets: []
+      }
+    }
+  }
+
   const [searchQuery, setSearchQuery] = useState("")
-  const [currentEnvironment, setCurrentEnvironment] = useState("development")
+  const [currentEnvironment, setCurrentEnvironment] = useState("")
   const [isAddEnvDialogOpen, setIsAddEnvDialogOpen] = useState(false)
   const [newEnvName, setNewEnvName] = useState("")
   const [isDeleteEnvDialogOpen, setIsDeleteEnvDialogOpen] = useState(false)
   const [envToDelete, setEnvToDelete] = useState("")
   const [environments, setEnvironments] = useState<string[]>([])
   const [showEditor, setShowEditor] = useState(false)
-  const [project, setProject] = useState<Project | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const { toast } = useToast()
 
-  // Fetch project data
   useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch(`/api/projects/${id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch project');
-        }
-        const data = await response.json();
-        setProject(data);
-        if (data.environments?.length > 0) {
-          setEnvironments(data.environments);
-          setCurrentEnvironment(data.environments[0]);
-        }
-      } catch (error) {
-        console.error('Error fetching project:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load project details",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (id) {
-      fetchProject();
+    if (project.environments && project.environments.length > 0) {
+      setEnvironments(project.environments)
+      setCurrentEnvironment(project.environments[0])
     }
-  }, [id, toast]);
+  }, [project.id, project.environments])
 
-  const handleAddEnvironment = async () => {
+  const handleAddEnvironment = () => {
     if (newEnvName.trim() && !environments.includes(newEnvName.toLowerCase())) {
-      try {
-        const newEnv = newEnvName.toLowerCase();
-        const response = await fetch(`/api/projects/${id}/environments`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ environment: newEnv }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to add environment');
-        }
-
-        setEnvironments(prev => [...prev, newEnv]);
-        setCurrentEnvironment(newEnv);
-        setNewEnvName("");
-        setIsAddEnvDialogOpen(false);
-        
-        toast({
-          title: "Success",
-          description: "Environment has been added successfully",
-        });
-      } catch (error) {
-        console.error('Error adding environment:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add environment",
-          variant: "destructive",
-        });
-      }
+      setEnvironments([...environments, newEnvName.toLowerCase()])
+      setCurrentEnvironment(newEnvName.toLowerCase())
+      setNewEnvName("")
+      setIsAddEnvDialogOpen(false)
     }
-  };
-
-  const handleDeleteEnvironment = async () => {
-    if (envToDelete && environments.length > 1) {
-      try {
-        const response = await fetch(`/api/projects/${id}/environments/${envToDelete}`, {
-          method: 'DELETE',
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to delete environment');
-        }
-
-        setEnvironments(prev => prev.filter(env => env !== envToDelete));
-        if (currentEnvironment === envToDelete) {
-          setCurrentEnvironment(environments[0]);
-        }
-        setIsDeleteEnvDialogOpen(false);
-
-        toast({
-          title: "Success",
-          description: "Environment has been deleted successfully",
-        });
-      } catch (error) {
-        console.error('Error deleting environment:', error);
-        toast({
-          title: "Error",
-          description: "Failed to delete environment",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const openDeleteDialog = (env: string) => {
-    setEnvToDelete(env);
-    setIsDeleteEnvDialogOpen(true);
-  };
-
-  if (isLoading) {
-    return <div className="p-8 text-center">Loading project details...</div>;
   }
 
-  if (!project) {
-    return <div className="p-8 text-center">Project not found</div>;
+  const handleDeleteEnvironment = () => {
+    if (envToDelete && environments.length > 1) {
+      const newEnvironments = environments.filter((env) => env !== envToDelete)
+      setEnvironments(newEnvironments)
+      if (currentEnvironment === envToDelete) {
+        setCurrentEnvironment(newEnvironments[0])
+      }
+      setIsDeleteEnvDialogOpen(false)
+    }
+  }
+
+  const openDeleteDialog = (env: string) => {
+    setEnvToDelete(env)
+    setIsDeleteEnvDialogOpen(true)
+  }
+
+  // Function to get environment button styling
+  const getEnvironmentButtonClass = (env: string) => {
+    if (currentEnvironment === env) {
+      switch (env) {
+        case "development":
+          return "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border-blue-300"
+        case "staging":
+          return "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border-amber-300"
+        case "production":
+          return "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400 border-green-300"
+        default:
+          return "bg-secondary text-secondary-foreground"
+      }
+    }
+    return "bg-transparent"
+  }
+
+  // Function to get environment badge styling
+  const getEnvironmentBadgeClass = (env: string) => {
+    switch (env) {
+      case "dev":
+        return "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
+      case "dev_personal":
+        return "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400"
+      case "stg":
+        return "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400"
+      case "prd":
+        return "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+      default:
+        return ""
+    }
+  }
+
+  if (!currentEnvironment) {
+    return <div className="p-8 text-center text-muted-foreground">Loading project details...</div>
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">{project.name}</h1>
-          <p className="text-gray-500 dark:text-gray-400">{project.description}</p>
-          <div className="mt-2 flex items-center text-sm text-muted-foreground">
-            <span className="mr-4">Created on {new Date(project.createdAt).toLocaleDateString()}</span>
-            <span className="mr-4">•</span>
-            <span>{project.teamMembers} team member{project.teamMembers !== 1 ? 's' : ''}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Environment selector */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {environments.map((env) => (
-          <div key={env} className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className={`${
-                currentEnvironment === env
-                  ? "bg-primary/10 text-primary border-primary/20"
-                  : "bg-transparent hover:bg-primary/5"
-              }`}
-              onClick={() => setCurrentEnvironment(env)}
-            >
-              {env}
-            </Button>
-            {environments.length > 1 && (
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap gap-2">
+          {environments.map((env) => (
+            <div key={env} className="relative group">
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => openDeleteDialog(env)}
+                variant="outline"
+                className={`capitalize ${getEnvironmentButtonClass(env)}`}
+                onClick={() => setCurrentEnvironment(env)}
               >
-                <X className="h-4 w-4" />
+                {env}
+                <Badge variant="outline" className="ml-2 bg-background">
+                  {project.secrets[env]?.configs || 0}
+                </Badge>
               </Button>
-            )}
-          </div>
-        ))}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsAddEnvDialogOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Add Environment
-        </Button>
-      </div>
-
-      {/* Search and view toggle */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
-          <Input
-            placeholder="Search secrets..."
-            className="pl-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <Button variant="outline" onClick={() => setShowEditor(!showEditor)}>
-          {showEditor ? "Table View" : "Editor View"}
-        </Button>
-      </div>
-
-      {/* Secrets view */}
-      {showEditor ? (
-        <SecretsEditor
-          projectId={id}
-          environment={currentEnvironment}
-          searchQuery={searchQuery}
-        />
-      ) : (
-        <SecretsTable
-          projectId={id}
-          environment={currentEnvironment}
-          searchQuery={searchQuery}
-        />
-      )}
-
-      {/* Add Environment Dialog */}
-      <Dialog open={isAddEnvDialogOpen} onOpenChange={setIsAddEnvDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Environment</DialogTitle>
-            <DialogDescription>
-              Enter a name for the new environment.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={newEnvName}
-                onChange={(e) => setNewEnvName(e.target.value)}
-                placeholder="e.g. staging"
-              />
+              {environments.length > 1 && env !== "production" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 absolute -top-2 -right-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => openDeleteDialog(env)}
+                >
+                  <X className="h-3 w-3" />
+                  <span className="sr-only">Delete environment</span>
+                </Button>
+              )}
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddEnvDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddEnvironment}>Add Environment</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          ))}
+          <Dialog open={isAddEnvDialogOpen} onOpenChange={setIsAddEnvDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Plus className="h-4 w-4" />
+                <span className="sr-only">Add environment</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Environment</DialogTitle>
+                <DialogDescription>
+                  Create a new environment to manage your secrets. Environment names should be lowercase and contain
+                  only letters, numbers, and underscores.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="env-name">Environment Name</Label>
+                  <Input
+                    id="env-name"
+                    placeholder="e.g., integration, testing"
+                    value={newEnvName}
+                    onChange={(e) => setNewEnvName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddEnvDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddEnvironment}
+                  disabled={!newEnvName.trim() || environments.includes(newEnvName.toLowerCase())}
+                >
+                  Add Environment
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
 
-      {/* Delete Environment Dialog */}
+        <div className="flex w-full flex-1 items-center gap-2 sm:w-auto sm:justify-end">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search secrets..."
+              className="w-full pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button onClick={() => setShowEditor(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Secret
+          </Button>
+        </div>
+      </div>
+
       <AlertDialog open={isDeleteEnvDialogOpen} onOpenChange={setIsDeleteEnvDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Environment</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete the {envToDelete} environment? This action cannot be undone.
+              Are you sure you want to delete the "{envToDelete}" environment? This action cannot be undone and all
+              secrets in this environment will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteEnvironment}>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteEnvironment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <div className="grid gap-4">
+        {/* Environment configs */}
+        <div className="grid gap-4">
+          {project.secrets[currentEnvironment]?.secrets.map((secret, index) => (
+            <Card key={index} className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-mono text-sm">{secret.name}</span>
+                  </div>
+                  <Badge variant="outline" className={getEnvironmentBadgeClass(secret.name)}>
+                    {secret.locked ? "Locked" : "Unlocked"}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          <Button variant="outline" className="flex h-16 items-center justify-center border-dashed">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Config
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm">
+            <Eye className="mr-2 h-4 w-4" />
+            Reveal All
+          </Button>
+          <Button variant="outline" size="sm">
+            <EyeOff className="mr-2 h-4 w-4" />
+            Hide All
+          </Button>
+          <Button variant="outline" size="sm">
+            <Copy className="mr-2 h-4 w-4" />
+            Copy as .env
+          </Button>
+          <Button variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+          <Button variant="outline" size="sm">
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+          <Button variant="outline" size="sm" className="text-destructive hover:bg-destructive/10">
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete All
+          </Button>
+        </div>
+
+        {showEditor ? (
+          <SecretsEditor environment={currentEnvironment} />
+        ) : (
+          <div className="mt-4">
+            <h3 className="mb-4 font-medium">Active Secrets ({currentEnvironment})</h3>
+            <SecretsTable environment={currentEnvironment} searchQuery={searchQuery} />
+          </div>
+        )}
+      </div>
     </div>
-  );
+  )
 }
