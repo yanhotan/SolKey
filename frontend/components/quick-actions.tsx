@@ -17,12 +17,7 @@ export function QuickActions() {
       icon: <UserPlus className="h-4 w-4" />,
       href: "/dashboard/team",
     },
-    {
-      title: "Generate API Key",
-      description: "Create a new API key for integrations",
-      icon: <Key className="h-4 w-4" />,
-      href: "/dashboard/tokens",
-    },
+
   ]
 
   return (
