@@ -1,4 +1,4 @@
-import { type FC } from 'react';
+import { type FC, useEffect } from 'react';
 import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { 
@@ -27,7 +27,11 @@ interface EncryptionLog {
   details: any;
 }
 
-export const NewEncryptionTest: FC = () => {
+interface NewEncryptionTestProps {
+  onDataShared?: (encryptedApiKey: EncryptedData, encryptedAesKeys: {[key: string]: string}) => void;
+}
+
+export const NewEncryptionTest: FC<NewEncryptionTestProps> = ({ onDataShared }) => {
   const { connected } = useWallet();
   const toast = useToast();
   
@@ -253,6 +257,13 @@ export const NewEncryptionTest: FC = () => {
     setLogs([]);
     addLog('Reset Test', { timestamp: new Date().toISOString() });
   };
+
+  // Notify parent when data is ready to share
+  useEffect(() => {
+    if (encryptedApiKey && Object.keys(encryptedAesKeys).length > 0) {
+      onDataShared?.(encryptedApiKey, encryptedAesKeys);
+    }
+  }, [encryptedApiKey, encryptedAesKeys, onDataShared]);
 
   if (!connected) {
     return (
