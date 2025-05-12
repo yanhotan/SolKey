@@ -12,7 +12,7 @@ This is a full-stack application with a Next.js frontend and Node.js backend. Th
 ## Project Structure
 
 ```
-solkey/
+solsecure/
 ├── frontend/          # Next.js frontend application
 ├── solkey-backend/    # Express.js backend server
 ├── scripts/          # Utility scripts
@@ -25,7 +25,7 @@ solkey/
 
 ```powershell
 git clone <repository-url>
-cd solkey
+cd solsecure
 ```
 
 ### 2. Frontend Setup

@@ -15,9 +15,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { useState } from "react"
 
 export function ConnectWalletButton() {
   const { connected, disconnect, publicKey, select, wallet } = useWallet()
+  const [showDialog, setShowDialog] = useState(false)
   
   // Function to shorten the wallet address
   const shortenAddress = (address: string) => {
@@ -29,8 +31,30 @@ export function ConnectWalletButton() {
   const connectWallet = async (name: "Phantom" | "Solflare") => {
     try {
       await select(name as WalletName)
+      setShowDialog(false)
     } catch (error) {
       console.error("Failed to connect wallet:", error)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    try {
+      if (disconnect) {
+        const clearStorageData = () => {
+          const STORAGE_KEY_PREFIX = 'solkey';
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            if (key.startsWith(STORAGE_KEY_PREFIX) && !key.startsWith('encrypted:')) {
+              localStorage.removeItem(key);
+            }
+          });
+        };
+        clearStorageData();
+        await disconnect();
+        setShowDialog(false)
+      }
+    } catch (error) {
+      console.error("Failed to disconnect wallet:", error)
     }
   }
 
@@ -41,7 +65,7 @@ export function ConnectWalletButton() {
         variant="outline" 
         size="sm" 
         className="gap-2" 
-        onClick={() => disconnect()}
+        onClick={handleDisconnect}
       >
         <div className="h-2 w-2 rounded-full bg-green-500"></div>
         {shortenAddress(publicKey.toBase58())}
@@ -52,9 +76,9 @@ export function ConnectWalletButton() {
     )
   }
 
-  // Show connection dialog when not connected
+  // When not connected, show simple connect button that opens dialog when clicked
   return (
-    <Dialog>
+    <Dialog open={showDialog} onOpenChange={setShowDialog}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Wallet className="h-4 w-4" />

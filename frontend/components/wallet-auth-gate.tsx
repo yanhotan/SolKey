@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { useWallet } from "@solana/wallet-adapter-react"
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui"
-import "@solana/wallet-adapter-react-ui/styles.css"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Shield, Check } from "lucide-react"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
+import { ConnectWalletButton } from "@/components/connect-wallet-button"
 
 interface WalletAuthGateProps {
   children: React.ReactNode
@@ -31,9 +30,10 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
 
   if (!connected) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-2xl font-bold mb-4">Connect Your Wallet</h1>
-        <WalletMultiButton />
+      <div className="flex min-h-screen">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          {children}
+        </main>
       </div>
     )
   }

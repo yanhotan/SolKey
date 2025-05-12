@@ -17,7 +17,11 @@ import { shortenAddress } from "@/lib/utils"
 import { WalletName } from "@solana/wallet-adapter-base"
 import "@solana/wallet-adapter-react-ui/styles.css"
 
-export function ConnectWalletButton() {
+interface ConnectWalletButtonProps {
+  showConnectDialog?: boolean;
+}
+
+export function ConnectWalletButton({ showConnectDialog = false }: ConnectWalletButtonProps) {
   const { connected, disconnect, publicKey, select, wallet, connecting } = useWallet()
 
   const handleConnect = async (walletName: "Phantom" | "Solflare") => {
@@ -31,19 +35,16 @@ export function ConnectWalletButton() {
   const handleDisconnect = async () => {
     try {
       if (disconnect) {
-        // First clear wallet-related storage data
         const clearStorageData = () => {
           const STORAGE_KEY_PREFIX = 'solkey';
           const keys = Object.keys(localStorage);
           keys.forEach(key => {
-            // Only remove solkey-related data and keep encrypted secrets
             if (key.startsWith(STORAGE_KEY_PREFIX) && !key.startsWith('encrypted:')) {
               localStorage.removeItem(key);
             }
           });
         };
         clearStorageData();
-        // Then disconnect the wallet
         await disconnect();
       }
     } catch (error) {
@@ -51,7 +52,6 @@ export function ConnectWalletButton() {
     }
   }
 
-  // Just render the connected state with disconnect button if already connected
   if (connected && publicKey) {
     return (
       <Button 
@@ -69,7 +69,16 @@ export function ConnectWalletButton() {
     )
   }
 
-  // Show wallet connection dialog only when not connected
+  // Only show dialog when explicitly requested via prop
+  if (!showConnectDialog) {
+    return (
+      <Button variant="outline" size="sm" className="gap-2" onClick={() => handleConnect("Phantom")}>
+        <Wallet className="h-4 w-4" />
+        Connect Wallet
+      </Button>
+    )
+  }
+
   return (
     <Dialog>
       <DialogTrigger asChild>

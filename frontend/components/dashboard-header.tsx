@@ -1,7 +1,9 @@
+/// <reference types="react" />
+
 "use client"
 
-import { useState } from "react"
-import { Bell, Search, User } from "lucide-react"
+import * as React from "react"
+import { Bell, Search, User, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -16,9 +18,38 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ConnectWalletButton } from "@/components/connect-wallet-wallet-button"
 import Link from "next/link"
+import { useWallet } from "@solana/wallet-adapter-react"
+import { Badge } from "@/components/ui/badge"
+import { shortenAddress } from "@/lib/utils"
+import { HTMLAttributes } from "react"
+
+interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
+  variant?: "default" | "secondary" | "destructive" | "outline"
+}
 
 export function DashboardHeader() {
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const { connected, disconnect, publicKey } = useWallet()
+
+  const handleDisconnect = async () => {
+    try {
+      if (disconnect) {
+        const clearStorageData = () => {
+          const STORAGE_KEY_PREFIX = 'solkey';
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            if (key.startsWith(STORAGE_KEY_PREFIX) && !key.startsWith('encrypted:')) {
+              localStorage.removeItem(key);
+            }
+          });
+        };
+        clearStorageData();
+        await disconnect();
+      }
+    } catch (error) {
+      console.error("Failed to disconnect wallet:", error)
+    }
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
@@ -33,11 +64,26 @@ export function DashboardHeader() {
           placeholder="Search..."
           className="w-full rounded-lg bg-background pl-8 md:w-[300px] lg:w-[400px]"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
         />
       </div>
       <div className="flex flex-1 items-center justify-end gap-2">
-        <ConnectWalletButton />
+        {connected && publicKey ? (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2" 
+            onClick={handleDisconnect}
+          >
+            <div className="h-2 w-2 rounded-full bg-green-500"></div>
+            {shortenAddress(publicKey.toBase58())}
+            <Badge variant="outline" className="ml-1 text-xs">
+              Devnet
+            </Badge>
+          </Button>
+        ) : (
+          <ConnectWalletButton />
+        )}
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-purple-500"></span>
@@ -63,6 +109,12 @@ export function DashboardHeader() {
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuItem>Subscription</DropdownMenuItem>
             <DropdownMenuSeparator />
+            {connected && (
+              <DropdownMenuItem onClick={handleDisconnect}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Disconnect Wallet</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem>Log out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
