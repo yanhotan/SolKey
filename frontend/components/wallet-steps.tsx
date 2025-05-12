@@ -1,12 +1,11 @@
 "use client"
 
 import { useWallet } from "@solana/wallet-adapter-react"
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui"
-import "@solana/wallet-adapter-react-ui/styles.css"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Shield, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ConnectWalletButton } from "@/components/connect-wallet-button"
 
 export function WalletSteps() {
   const { connected, publicKey } = useWallet()
@@ -17,7 +16,7 @@ export function WalletSteps() {
         <CardHeader>
           <CardTitle>Wallet Authentication Required</CardTitle>
           <CardDescription>
-            Connect your Solana wallet (Devnet) and sign a message to securely access your encrypted secrets
+            Connect your Solana wallet and sign a message to securely access your encrypted secrets
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -43,10 +42,10 @@ export function WalletSteps() {
               <div className="flex-1">
                 <h3 className="font-medium">Step 1: Connect Wallet</h3>
                 <p className="text-sm text-muted-foreground">
-                  Connect your Solana wallet (Devnet) to continue
+                  Connect your Solana wallet to continue
                 </p>
               </div>
-              {!connected && <WalletMultiButton className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600" />}
+              {!connected && <ConnectWalletButton />}
             </div>
           </div>
 
