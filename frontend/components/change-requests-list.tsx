@@ -18,7 +18,7 @@ export function ChangeRequestsList() {
       id: "CR-001",
       title: "Update db credentials",
       description: "Update database credentials across all environments",
-      status: "applied",
+      status: "in-review",
       author: "John Doe",
       createdAt: "2 days ago",
       environments: ["dev", "stg", "prd"],

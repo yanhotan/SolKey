@@ -3,7 +3,7 @@ import * as nacl from 'tweetnacl';
 
 export interface EncryptedData {
   encrypted: string;
-  nonce: string;
+  iv: string; // Changed from nonce to iv to match our implementation
 }
 
 export const deriveEncryptionKey = async (message: string, signature: string): Promise<Uint8Array> => {
@@ -23,7 +23,7 @@ export const encryptData = (
   
   return {
     encrypted: bs58Encode(encryptedBytes),
-    nonce: bs58Encode(nonce)
+    iv: bs58Encode(nonce) // Changed from nonce to iv to match our implementation
   };
 };
 
@@ -34,7 +34,7 @@ export const decryptData = (
   try {
     const decrypted = nacl.secretbox.open(
       bs58Decode(encryptedData.encrypted),
-      bs58Decode(encryptedData.nonce),
+      bs58Decode(encryptedData.iv), // Changed from nonce to iv to match our implementation
       encryptionKey
     );
     
