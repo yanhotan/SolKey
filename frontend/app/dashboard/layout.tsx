@@ -9,7 +9,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    // <WalletAuthGate>
+    <WalletAuthGate>
       <div className="flex min-h-screen flex-col">
         <DashboardHeader />
 
@@ -25,7 +25,7 @@ export default function DashboardLayout({
           </main>
         </div>
       </div>
-    // </WalletAuthGate>
+   </WalletAuthGate>
   )
 }
 
