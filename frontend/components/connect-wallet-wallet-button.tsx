@@ -23,7 +23,7 @@ export function ConnectWalletButton() {
   const handleConnect = async (walletType: string) => {
     setIsConnecting(true)
     setWalletType(walletType)
-
+    
     // Simulate wallet connection
     setTimeout(() => {
       setIsConnecting(false)
