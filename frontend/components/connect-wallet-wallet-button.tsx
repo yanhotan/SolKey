@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Wallet } from "lucide-react"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Wallet } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,42 +10,93 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletName } from "@solana/wallet-adapter-base";
 
 export function ConnectWalletButton() {
-  const [isConnected, setIsConnected] = useState(false)
-  const [isConnecting, setIsConnecting] = useState(false)
-  const [walletAddress, setWalletAddress] = useState("")
-  const [walletType, setWalletType] = useState("")
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [walletAddress, setWalletAddress] = useState("");
+  const [walletType, setWalletType] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { wallets, select, disconnect, connect, publicKey } = useWallet();
 
-  const handleConnect = async (walletType: string) => {
-    setIsConnecting(true)
-    setWalletType(walletType)
-    
+  const handleConnect = async (walletType: "Phantom" | "Solflare" | "") => {
+    try {
+      setIsConnecting(true);
+      setWalletType(walletType);
+
+      const walletAdapter = wallets.find((w) => w.adapter.name === walletType);
+      if (!walletAdapter)
+        throw new Error(`Wallet adapter for ${walletType} not found`);
+
+      await select(walletAdapter.adapter.name);
+      await connect();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to connect wallet:", error);
+    }
+
     // Simulate wallet connection
-    setTimeout(() => {
-      setIsConnecting(false)
-      setIsConnected(true)
-      setWalletAddress(walletType === "metamask" ? "8xH4...3kPd" : "7pQr...9mZs")
-      setIsDialogOpen(false)
-    }, 1500)
-  }
+    // setTimeout(() => {
+    //   setIsConnecting(false)
+    //   setIsConnected(true)
+    //   setWalletAddress(walletType === "metamask" ? "8xH4...3kPd" : "7pQr...9mZs")
+    //   setIsDialogOpen(false)
+    // }, 1500)
+  };
 
-  const handleDisconnect = () => {
-    setIsConnected(false)
-    setWalletAddress("")
-    setWalletType("")
-  }
+  const handleDisconnect = async () => {
+    try {
+      if (disconnect) {
+        // Clear Solana wallet-related data from localStorage
+        const clearStorageData = () => {
+          const STORAGE_KEY_PREFIX = "solkey";
+          const keys = Object.keys(localStorage);
+          keys.forEach((key) => {
+            if (
+              key.startsWith(STORAGE_KEY_PREFIX) &&
+              !key.startsWith("encrypted:")
+            ) {
+              localStorage.removeItem(key);
+            }
+          });
+        };
+        clearStorageData();
+
+        // Disconnect from the wallet
+        await disconnect();
+      }
+    } catch (error) {
+      console.error("Failed to disconnect wallet:", error);
+    } finally {
+      // Reset UI state
+      setIsConnected(false);
+      setWalletAddress("");
+      setWalletType("");
+    }
+  };
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
         {isConnected ? (
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleDisconnect}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleDisconnect}
+          >
             <div
-              className={`h-4 w-4 rounded-full ${walletType === "metamask" ? "bg-orange-500" : walletType === "phantom" ? "bg-purple-500" : "bg-solflare-500"}`}
+              className={`h-4 w-4 rounded-full ${
+                walletType === "metamask"
+                  ? "bg-orange-500"
+                  : walletType === "phantom"
+                  ? "bg-purple-500"
+                  : "bg-solflare-500"
+              }`}
             ></div>
             {walletAddress}
             <Badge variant="outline" className="ml-1 text-xs">
@@ -63,7 +114,8 @@ export function ConnectWalletButton() {
         <DialogHeader>
           <DialogTitle>Connect your wallet</DialogTitle>
           <DialogDescription>
-            Connect your Solana wallet (Devnet) to manage your subscription and make payments.
+            Connect your Solana wallet (Devnet) to manage your subscription and
+            make payments.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -71,7 +123,7 @@ export function ConnectWalletButton() {
             variant="outline"
             className="flex items-center justify-between"
             disabled={isConnecting}
-            onClick={() => handleConnect("phantom")}
+            onClick={() => handleConnect("Phantom")}
           >
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-purple-500 flex items-center justify-center">
@@ -79,14 +131,16 @@ export function ConnectWalletButton() {
               </div>
               <span>Phantom</span>
             </div>
-            {isConnecting && walletType === "phantom" ? "Connecting..." : "Connect"}
+            {isConnecting && walletType === "phantom"
+              ? "Connecting..."
+              : "Connect"}
           </Button>
 
           <Button
             variant="outline"
             className="flex items-center justify-between"
             disabled={isConnecting}
-            onClick={() => handleConnect("solflare")}
+            onClick={() => handleConnect("Solflare")}
           >
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center">
@@ -94,10 +148,12 @@ export function ConnectWalletButton() {
               </div>
               <span>Solflare</span>
             </div>
-            {isConnecting && walletType === "solflare" ? "Connecting..." : "Connect"}
+            {isConnecting && walletType === "solflare"
+              ? "Connecting..."
+              : "Connect"}
           </Button>
 
-          <Button
+          {/* <Button
             variant="outline"
             className="flex items-center justify-between"
             disabled={isConnecting}
@@ -146,9 +202,9 @@ export function ConnectWalletButton() {
               </Badge>
             </div>
             {isConnecting && walletType === "metamask" ? "Connecting..." : "Connect"}
-          </Button>
+          </Button> */}
 
-          <Button
+          {/* <Button
             variant="outline"
             className="flex items-center justify-between"
             disabled={isConnecting}
@@ -161,12 +217,13 @@ export function ConnectWalletButton() {
               <span>Backpack</span>
             </div>
             {isConnecting && walletType === "backpack" ? "Connecting..." : "Connect"}
-          </Button>
+          </Button> */}
         </div>
         <div className="text-sm text-muted-foreground mt-2">
-          By connecting your wallet, you agree to our Terms of Service and Privacy Policy.
+          By connecting your wallet, you agree to our Terms of Service and
+          Privacy Policy.
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
