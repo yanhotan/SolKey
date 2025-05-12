@@ -1,11 +1,17 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { MoreHorizontal, Mail, Shield, UserX } from "lucide-react"
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Mail, Shield, UserX } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +19,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -21,14 +27,20 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function TeamManagement() {
-  const [selectedMember, setSelectedMember] = useState<string | null>(null)
-  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
-  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false)
-  const [newRole, setNewRole] = useState("")
+  const [selectedMember, setSelectedMember] = useState<string | null>(null);
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [newRole, setNewRole] = useState("");
 
   // Sample team members data
   const teamMembers = [
@@ -37,7 +49,7 @@ export function TeamManagement() {
       name: "John Doe",
       email: "john@example.com",
       role: "owner",
-      avatar: "/placeholder.svg?height=40&width=40",
+      avatar: "/images/no1_avatar.jpg",
       initials: "JD",
       status: "active",
       joinedAt: "May 2023",
@@ -47,7 +59,7 @@ export function TeamManagement() {
       name: "Sarah Kim",
       email: "sarah@example.com",
       role: "admin",
-      avatar: "/placeholder.svg?height=40&width=40",
+      avatar: "/images/no2_avatar.jpg",
       initials: "SK",
       status: "active",
       joinedAt: "June 2023",
@@ -57,7 +69,7 @@ export function TeamManagement() {
       name: "Mike Johnson",
       email: "mike@example.com",
       role: "member",
-      avatar: "/placeholder.svg?height=40&width=40",
+      avatar: "/images/no3_avatar.jpg",
       initials: "MJ",
       status: "active",
       joinedAt: "July 2023",
@@ -67,7 +79,7 @@ export function TeamManagement() {
       name: "Lisa Chen",
       email: "lisa@example.com",
       role: "member",
-      avatar: "/placeholder.svg?height=40&width=40",
+      avatar: "/images/no4_avatar.jpg",
       initials: "LC",
       status: "active",
       joinedAt: "August 2023",
@@ -77,50 +89,52 @@ export function TeamManagement() {
       name: "David Wilson",
       email: "david@example.com",
       role: "member",
-      avatar: "/placeholder.svg?height=40&width=40",
+      avatar: "/images/no5_avatar.jpg",
       initials: "DW",
       status: "pending",
       joinedAt: "September 2023",
     },
-  ]
+  ];
 
   const handleChangeRole = (memberId: string) => {
-    setSelectedMember(memberId)
-    setIsRoleDialogOpen(true)
+    setSelectedMember(memberId);
+    setIsRoleDialogOpen(true);
     // Find current role and set it as default
-    const member = teamMembers.find((m) => m.id === memberId)
+    const member = teamMembers.find((m) => m.id === memberId);
     if (member) {
-      setNewRole(member.role)
+      setNewRole(member.role);
     }
-  }
+  };
 
   const handleRemoveMember = (memberId: string) => {
-    setSelectedMember(memberId)
-    setIsRemoveDialogOpen(true)
-  }
+    setSelectedMember(memberId);
+    setIsRemoveDialogOpen(true);
+  };
 
   const confirmChangeRole = () => {
     // Logic to change role would go here
-    console.log(`Changed role for member ${selectedMember} to ${newRole}`)
-    setIsRoleDialogOpen(false)
-  }
+    console.log(`Changed role for member ${selectedMember} to ${newRole}`);
+    setIsRoleDialogOpen(false);
+  };
 
   const confirmRemoveMember = () => {
     // Logic to remove member would go here
-    console.log(`Removed member ${selectedMember}`)
-    setIsRemoveDialogOpen(false)
-  }
+    console.log(`Removed member ${selectedMember}`);
+    setIsRemoveDialogOpen(false);
+  };
 
   const resendInvitation = (memberId: string) => {
     // Logic to resend invitation would go here
-    console.log(`Resent invitation to member ${memberId}`)
-  }
+    console.log(`Resent invitation to member ${memberId}`);
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Team Members</CardTitle>
-        <CardDescription>Manage your team members and their roles</CardDescription>
+        <CardDescription>
+          Manage your team members and their roles
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="rounded-md border">
@@ -131,16 +145,24 @@ export function TeamManagement() {
             <div className="col-span-2">Actions</div>
           </div>
           {teamMembers.map((member) => (
-            <div key={member.id} className="grid grid-cols-12 gap-4 border-t p-4">
+            <div
+              key={member.id}
+              className="grid grid-cols-12 gap-4 border-t p-4"
+            >
               <div className="col-span-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={member.avatar || "/placeholder.svg"} alt={member.name} />
+                    <AvatarImage
+                      src={member.avatar || "/placeholder.svg"}
+                      alt={member.name}
+                    />
                     <AvatarFallback>{member.initials}</AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="font-medium">{member.name}</div>
-                    <div className="text-sm text-muted-foreground">{member.email}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {member.email}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -151,8 +173,8 @@ export function TeamManagement() {
                     member.role === "owner"
                       ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400"
                       : member.role === "admin"
-                        ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
-                        : "bg-gray-50 text-gray-700 dark:bg-gray-950/30 dark:text-gray-400"
+                      ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
+                      : "bg-gray-50 text-gray-700 dark:bg-gray-950/30 dark:text-gray-400"
                   }
                 >
                   {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
@@ -173,7 +195,12 @@ export function TeamManagement() {
               </div>
               <div className="col-span-2 flex items-center justify-end">
                 {member.status === "pending" ? (
-                  <Button variant="ghost" size="sm" className="h-8" onClick={() => resendInvitation(member.id)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => resendInvitation(member.id)}
+                  >
                     <Mail className="mr-2 h-4 w-4" />
                     Resend
                   </Button>
@@ -188,7 +215,9 @@ export function TeamManagement() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       {member.role !== "owner" && (
-                        <DropdownMenuItem onClick={() => handleChangeRole(member.id)}>
+                        <DropdownMenuItem
+                          onClick={() => handleChangeRole(member.id)}
+                        >
                           <Shield className="mr-2 h-4 w-4" />
                           Change role
                         </DropdownMenuItem>
@@ -216,7 +245,9 @@ export function TeamManagement() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Change Member Role</DialogTitle>
-              <DialogDescription>Update the role and permissions for this team member.</DialogDescription>
+              <DialogDescription>
+                Update the role and permissions for this team member.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -250,7 +281,10 @@ export function TeamManagement() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsRoleDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsRoleDialogOpen(false)}
+              >
                 Cancel
               </Button>
               <Button onClick={confirmChangeRole}>Save Changes</Button>
@@ -264,11 +298,15 @@ export function TeamManagement() {
             <DialogHeader>
               <DialogTitle>Remove Team Member</DialogTitle>
               <DialogDescription>
-                Are you sure you want to remove this member from your team? They will lose access to all projects.
+                Are you sure you want to remove this member from your team? They
+                will lose access to all projects.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsRemoveDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsRemoveDialogOpen(false)}
+              >
                 Cancel
               </Button>
               <Button variant="destructive" onClick={confirmRemoveMember}>
@@ -279,5 +317,5 @@ export function TeamManagement() {
         </Dialog>
       </CardContent>
     </Card>
-  )
+  );
 }
