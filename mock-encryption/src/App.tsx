@@ -12,6 +12,7 @@ import {
 import { clusterApiUrl } from '@solana/web3.js';
 import { WalletConnection } from './components/WalletConnection';
 import { EncryptionTest } from './components/EncryptionTest';
+import { NewEncryptionTest } from './components/NewEncryptionTest';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
 const App: FC = () => {
@@ -41,6 +42,7 @@ const App: FC = () => {
                 <Heading>SolSecure Wallet Test</Heading>
                 <WalletConnection />
                 <EncryptionTest />
+                <NewEncryptionTest />
               </Stack>
             </Container>
           </WalletModalProvider>
