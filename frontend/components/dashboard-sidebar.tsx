@@ -73,8 +73,7 @@ export function DashboardSidebar() {
   ]
 
   return (
-    <div className="flex h-full w-64 flex-col border-r bg-sidebar-background text-sidebar-foreground">
-      {/* Removed the app name and icon from here */}
+    <div className="sticky top-0 h-screen flex w-64 flex-col border-r bg-sidebar-background text-sidebar-foreground">
       <div className="flex-1 overflow-auto py-4">
         <nav className="grid gap-1 px-2">
           {routes.map((route, index) => (

@@ -1,14 +1,27 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { MoreHorizontal, UserPlus } from "lucide-react"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { MoreHorizontal, UserPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,11 +29,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 
 export function ProjectTeam({ id }: { id: string }) {
-  const [email, setEmail] = useState("")
-  const [role, setRole] = useState("viewer")
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("viewer");
 
   // Sample team members data
   const teamMembers = [
@@ -29,7 +42,7 @@ export function ProjectTeam({ id }: { id: string }) {
       name: "John Doe",
       email: "john@example.com",
       role: "owner",
-      avatar: "/placeholder.svg?height=40&width=40",
+      avatar: "/images/no1_avatar.jpg",
       initials: "JD",
     },
     {
@@ -37,7 +50,7 @@ export function ProjectTeam({ id }: { id: string }) {
       name: "Sarah Kim",
       email: "sarah@example.com",
       role: "admin",
-      avatar: "/placeholder.svg?height=40&width=40",
+      avatar: "/public/images/no2_avatar.jpg",
       initials: "SK",
     },
     {
@@ -45,7 +58,7 @@ export function ProjectTeam({ id }: { id: string }) {
       name: "Mike Johnson",
       email: "mike@example.com",
       role: "editor",
-      avatar: "/placeholder.svg?height=40&width=40",
+      avatar: "/public/images/no3_avatar.jpg",
       initials: "MJ",
     },
     {
@@ -53,36 +66,46 @@ export function ProjectTeam({ id }: { id: string }) {
       name: "Lisa Chen",
       email: "lisa@example.com",
       role: "viewer",
-      avatar: "/placeholder.svg?height=40&width=40",
+      avatar: "/public/images/no4_avatar.jpg",
       initials: "LC",
     },
-  ]
+  ];
 
   const handleInvite = () => {
     // Invite logic would go here
-    console.log("Inviting:", { email, role })
-    setEmail("")
-    setRole("viewer")
-  }
+    console.log("Inviting:", { email, role });
+    setEmail("");
+    setRole("viewer");
+  };
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Team Members</CardTitle>
-          <CardDescription>Manage who has access to this project and their permissions</CardDescription>
+          <CardDescription>
+            Manage who has access to this project and their permissions
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {teamMembers.map((member) => (
-            <div key={member.id} className="flex items-center justify-between rounded-lg border p-4">
+            <div
+              key={member.id}
+              className="flex items-center justify-between rounded-lg border p-4"
+            >
               <div className="flex items-center gap-4">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={member.avatar || "/placeholder.svg"} alt={member.name} />
+                  <AvatarImage
+                    src={member.avatar || "/placeholder.svg"}
+                    alt={member.name}
+                  />
                   <AvatarFallback>{member.initials}</AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="font-medium">{member.name}</div>
-                  <div className="text-sm text-muted-foreground">{member.email}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {member.email}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -92,10 +115,10 @@ export function ProjectTeam({ id }: { id: string }) {
                     member.role === "owner"
                       ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400"
                       : member.role === "admin"
-                        ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
-                        : member.role === "editor"
-                          ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
-                          : "bg-gray-50 text-gray-700 dark:bg-gray-950/30 dark:text-gray-400"
+                      ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
+                      : member.role === "editor"
+                      ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                      : "bg-gray-50 text-gray-700 dark:bg-gray-950/30 dark:text-gray-400"
                   }
                 >
                   {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
@@ -111,7 +134,9 @@ export function ProjectTeam({ id }: { id: string }) {
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DropdownMenuItem>Change role</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive">Remove from project</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive">
+                      Remove from project
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -123,7 +148,9 @@ export function ProjectTeam({ id }: { id: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Invite Team Member</CardTitle>
-          <CardDescription>Add a new team member to this project</CardDescription>
+          <CardDescription>
+            Add a new team member to this project
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -158,5 +185,5 @@ export function ProjectTeam({ id }: { id: string }) {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }
