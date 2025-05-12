@@ -1,16 +1,10 @@
 const crypto = require("crypto");
-const { createClient } = require("@supabase/supabase-js");
 const { PublicKey } = require("@solana/web3.js");
 const nacl = require("tweetnacl");
 const util = require("tweetnacl-util");
 const bs58 = require("bs58");
 const { convertPublicKeyToX25519 } = require("ed2curve");
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+const { supabase } = require("./supabase");
 
 // Constants
 const AES_KEY_SIZE = 32; // 256 bits
@@ -21,30 +15,37 @@ function generateAESKey() {
 }
 
 function encryptAESKeyForUser(aesKey, userPublicKeyBase58) {
-  // Convert Solana public key (base58) to bytes
-  const ed25519PublicKey = bs58.decode(userPublicKeyBase58);
+  try {
+    // Convert Solana public key (base58) to bytes
+    const ed25519PublicKey = bs58.decode(userPublicKeyBase58);
+    if (!ed25519PublicKey) {
+      throw new Error("Invalid public key format");
+    }
 
-  // Convert Ed25519 public key to X25519
-  const x25519PublicKey = convertPublicKeyToX25519(ed25519PublicKey);
-  if (!x25519PublicKey) throw new Error("Invalid public key conversion");
+    // Convert Ed25519 public key to X25519
+    const x25519PublicKey = convertPublicKeyToX25519(ed25519PublicKey);
+    if (!x25519PublicKey) throw new Error("Invalid public key conversion");
 
-  // Generate ephemeral keypair
-  const ephemeralKeypair = nacl.box.keyPair();
+    // Generate ephemeral keypair
+    const ephemeralKeypair = nacl.box.keyPair();
 
-  // Derive shared secret (ECDH)
-  const nonce = nacl.randomBytes(nacl.box.nonceLength);
-  const encryptedAESKey = nacl.box(
-    aesKey,
-    nonce,
-    x25519PublicKey,
-    ephemeralKeypair.secretKey
-  );
+    // Derive shared secret (ECDH)
+    const nonce = nacl.randomBytes(nacl.box.nonceLength);
+    const encryptedAESKey = nacl.box(
+      aesKey,
+      nonce,
+      x25519PublicKey,
+      ephemeralKeypair.secretKey
+    );
 
-  return {
-    encryptedAESKey: util.encodeBase64(encryptedAESKey),
-    nonce: util.encodeBase64(nonce),
-    ephemeralPublicKey: util.encodeBase64(ephemeralKeypair.publicKey),
-  };
+    return {
+      encryptedAESKey: util.encodeBase64(encryptedAESKey),
+      nonce: util.encodeBase64(nonce),
+      ephemeralPublicKey: util.encodeBase64(ephemeralKeypair.publicKey),
+    };
+  } catch (error) {
+    throw new Error(`Failed to encrypt AES key: ${error.message}`);
+  }
 }
 
 // Encrypt data with AES
@@ -52,8 +53,8 @@ function encryptWithAES(data, key) {
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
 
-  let encrypted = cipher.update(data, "utf8", "hex");
-  encrypted += cipher.final("hex");
+  let encrypted = cipher.update(data, "utf8", "base64");
+  encrypted += cipher.final("base64");
 
   const authTag = cipher.getAuthTag();
 
@@ -66,15 +67,10 @@ function encryptWithAES(data, key) {
 
 // Decrypt data with AES
 function decryptWithAES(encryptedData, key, iv, authTag) {
-  const decipher = crypto.createDecipheriv(
-    "aes-256-gcm",
-    key,
-    Buffer.from(iv, "hex")
-  );
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(authTag);
 
-  decipher.setAuthTag(Buffer.from(authTag, "hex"));
-
-  let decrypted = decipher.update(encryptedData, "hex", "utf8");
+  let decrypted = decipher.update(encryptedData, "base64", "utf8");
   decrypted += decipher.final("utf8");
 
   return decrypted;
@@ -191,7 +187,7 @@ async function createSecret(
 }
 
 // Get a secret
-async function getSecret(secretId, walletAddress, privateKeyBase58) {
+async function getSecret(secretId, walletAddress) {
   try {
     // Get the secret
     const { data: secret, error: secretError } = await supabase
@@ -211,22 +207,6 @@ async function getSecret(secretId, walletAddress, privateKeyBase58) {
       .single();
 
     if (keyError) throw keyError;
-
-    // Decrypt the AES key using the user's private key
-    const decryptedAESKey = decryptAESKeyForUser(
-      keyData.encrypted_aes_key,
-      keyData.nonce,
-      keyData.ephemeral_public_key,
-      privateKeyBase58
-    );
-
-    // Verify access by attempting to decrypt (but don't return the value)
-    decryptWithAES(
-      secret.encrypted_value,
-      decryptedAESKey,
-      secret.iv,
-      secret.auth_tag
-    );
 
     // Return only the encrypted data
     return {
@@ -308,4 +288,5 @@ module.exports = {
   createSecret,
   getSecret,
   shareSecret,
+  decryptWithAES,
 };

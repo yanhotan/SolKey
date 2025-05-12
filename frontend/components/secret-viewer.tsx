@@ -1,8 +1,11 @@
+"use client";
+
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Button, Card, Typography, Alert } from "antd";
 import { EyeOutlined, EyeInvisibleOutlined } from "@ant-design/icons";
 import { api } from "../lib/api";
+import { useWalletEncryption } from "../hooks/use-wallet-encryption";
 
 const { Text } = Typography;
 
@@ -21,6 +24,7 @@ export default function SecretViewer({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { publicKey, signMessage } = useWallet();
+  const { handleSignMessage } = useWalletEncryption();
 
   const handleDecrypt = async () => {
     if (!publicKey || !signMessage) {
@@ -35,6 +39,10 @@ export default function SecretViewer({
       // Sign the auth message
       const message = new TextEncoder().encode("auth-to-decrypt");
       const signature = await signMessage(message);
+      console.log("Generated signature:", {
+        signatureLength: signature.length,
+        signatureBase64: Buffer.from(signature).toString("base64"),
+      });
 
       // Get the secret using the API configuration
       const data = await api.secrets.decrypt(secretId, {
@@ -44,6 +52,7 @@ export default function SecretViewer({
 
       setDecryptedValue(data.value);
     } catch (err) {
+      console.error("Decrypt error:", err);
       setError(err instanceof Error ? err.message : "Failed to decrypt secret");
     } finally {
       setIsLoading(false);

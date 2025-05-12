@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { FolderKanban, Users, Key, GitBranch } from "lucide-react"
-
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FolderKanban, Users, Key, GitBranch } from "lucide-react";
+import SecretViewer from "./secret-viewer";
 export function DashboardOverview() {
   const stats = [
     {
@@ -27,7 +27,7 @@ export function DashboardOverview() {
       description: "Last used 2 hours ago",
       icon: <Key className="h-5 w-5 text-blue-500" />,
     },
-  ]
+  ];
 
   return (
     <>
@@ -35,7 +35,9 @@ export function DashboardOverview() {
         <Card key={index}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">{stat.icon}</div>
+            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+              {stat.icon}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stat.value}</div>
@@ -43,6 +45,11 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
       ))}
+      <SecretViewer
+        secretId="c64b29fb-c554-44ff-a291-430698078362"
+        secretName="DATABASE_URL"
+        type="String"
+      />
     </>
-  )
+  );
 }
