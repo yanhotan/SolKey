@@ -30,6 +30,7 @@
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
+    "solkey-backend": "file:",
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
