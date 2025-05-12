@@ -5,7 +5,8 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui"
 import "@solana/wallet-adapter-react-ui/styles.css"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Wallet } from "lucide-react"
+import { Wallet, AlertCircle } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { WalletName } from "@solana/wallet-adapter-base"
 import {
   Dialog,
@@ -26,14 +27,22 @@ export function ConnectWalletButton() {
     if (!address) return ""
     return `${address.slice(0, 4)}...${address.slice(-4)}`
   }
+  const [error, setError] = useState<string | null>(null)
 
   // Type-safe wallet selection
   const connectWallet = async (name: "Phantom" | "Solflare") => {
+    setError(null)
     try {
       await select(name as WalletName)
       setShowDialog(false)
-    } catch (error) {
-      console.error("Failed to connect wallet:", error)
+    } catch (err) {
+      console.error("Failed to connect wallet:", err)
+      const errorMessage = err instanceof Error
+        ? err.message.includes('User rejected') 
+          ? 'Wallet connection was cancelled'
+          : 'Failed to connect wallet. Please try again.'
+        : 'Failed to connect wallet. Please try again.'
+      setError(errorMessage)
     }
   }
 
@@ -52,9 +61,14 @@ export function ConnectWalletButton() {
         clearStorageData();
         await disconnect();
         setShowDialog(false)
+        setError(null)
       }
-    } catch (error) {
-      console.error("Failed to disconnect wallet:", error)
+    } catch (err) {
+      console.error("Failed to disconnect wallet:", err)
+      const errorMessage = err instanceof Error
+        ? 'Failed to disconnect wallet: ' + err.message
+        : 'Failed to disconnect wallet. Please try again.'
+      setError(errorMessage)
     }
   }
 
@@ -85,14 +99,20 @@ export function ConnectWalletButton() {
           Connect Wallet
         </Button>
       </DialogTrigger>
-      
-      <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Connect your wallet</DialogTitle>
           <DialogDescription>
             Connect your Solana wallet to manage your secrets and settings.
           </DialogDescription>
         </DialogHeader>
+        {error && (
+          <Alert variant="destructive" className="mt-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         <div className="grid gap-4 py-4">
           <Button
             variant="outline"
