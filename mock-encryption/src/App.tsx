@@ -2,13 +2,18 @@ import { useState } from 'react'
 import { ChakraProvider, Container, Grid, GridItem } from '@chakra-ui/react'
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react'
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
-import { PhantomWalletAdapter } from '@solana/wallet-adapter-wallets'
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
 import { NewEncryptionTest } from './components/NewEncryptionTest'
 import { TeamMemberTest } from './components/TeamMemberTest'
+import { WalletConnection } from './components/WalletConnection'
 import { type EncryptedData } from './utils/crypto'
 import './App.css'
+import '@solana/wallet-adapter-react-ui/styles.css'
 
-const wallets = [new PhantomWalletAdapter()]
+const wallets = [
+  new PhantomWalletAdapter(),
+  new SolflareWalletAdapter()
+]
 const endpoint = "https://api.devnet.solana.com"
 
 function App() {
@@ -28,8 +33,8 @@ function App() {
     <ChakraProvider>
       <ConnectionProvider endpoint={endpoint}>
         <WalletProvider wallets={wallets} autoConnect>
-          <WalletModalProvider>
-            <Container maxW="container.xl" py={8}>
+          <WalletModalProvider>            <Container maxW="container.xl" py={8}>
+              <WalletConnection />
               <Grid templateColumns="repeat(2, 1fr)" gap={8}>
                 <GridItem>
                   <NewEncryptionTest

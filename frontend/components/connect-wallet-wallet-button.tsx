@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Wallet } from "lucide-react";
+import { useWalletEncryption } from "@/hooks/use-wallet-encryption";
 import {
   Dialog,
   DialogContent,
@@ -15,18 +16,26 @@ import { Badge } from "@/components/ui/badge";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletName } from "@solana/wallet-adapter-base";
 
-export function ConnectWalletButton() {
-  const [isConnected, setIsConnected] = useState(false);
+interface ConnectWalletButtonProps {
+  showConnectDialog?: boolean;
+}
+
+export function ConnectWalletButton({ showConnectDialog = false }: ConnectWalletButtonProps) {
+  const [isConnected, setIsConnected] = useState(false);  
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { wallets, select, disconnect, connect, publicKey, connected } = useWallet();
+  const { isInitialized } = useWalletEncryption();
   const [walletAddress, setWalletAddress] = useState("");
   const [walletType, setWalletType] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { wallets, select, disconnect, connect, publicKey } = useWallet();
 
+  // Update isConnected state when wallet state changes
+  useEffect(() => {
+    setIsConnected(connected && isInitialized);
+  }, [connected, isInitialized]);
   const handleConnect = async (walletType: "Phantom" | "Solflare" | "") => {
     try {
       setIsConnecting(true);
-      setWalletType(walletType);
 
       const walletAdapter = wallets.find((w) => w.adapter.name === walletType);
       if (!walletAdapter)
@@ -34,7 +43,11 @@ export function ConnectWalletButton() {
 
       await select(walletAdapter.adapter.name);
       await connect();
-      setIsDialogOpen(false);
+      
+      // Only close dialog if we're not showing the full dialog UI
+      if (!showConnectDialog) {
+        setIsDialogOpen(false);
+      }
     } catch (error) {
       console.error("Failed to connect wallet:", error);
     }
@@ -79,6 +92,34 @@ export function ConnectWalletButton() {
     }
   };
 
+    // Only show dialog when explicitly requested via prop
+  if (!showConnectDialog) {
+    return (
+      <Button variant="outline" size="sm" className="gap-2" onClick={() => handleConnect("Phantom")}>
+        <Wallet className="h-4 w-4" />
+        Connect Wallet
+      </Button>
+    )
+  }
+  // If dialog is not requested, show simple connect button
+  if (!showConnectDialog) {
+    return isConnected ? (
+      <Button variant="outline" size="sm" className="gap-2" onClick={handleDisconnect}>
+        <div className={`h-4 w-4 rounded-full ${walletType === "Phantom" ? "bg-purple-500" : "bg-orange-500"}`}></div>
+        {walletAddress}
+        <Badge variant="outline" className="ml-1 text-xs">
+          Devnet
+        </Badge>
+      </Button>
+    ) : (
+      <Button variant="outline" size="sm" className="gap-2" onClick={() => handleConnect("Phantom")}>
+        <Wallet className="h-4 w-4" />
+        Connect Wallet
+      </Button>
+    );
+  }
+
+  // Show full dialog UI when requested
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
@@ -114,7 +155,7 @@ export function ConnectWalletButton() {
         <DialogHeader>
           <DialogTitle>Connect your wallet</DialogTitle>
           <DialogDescription>
-            Connect your Solana wallet (Devnet) to manage your subscription and
+            Connect your Solana wallet to manage your subscription and
             make payments.
           </DialogDescription>
         </DialogHeader>

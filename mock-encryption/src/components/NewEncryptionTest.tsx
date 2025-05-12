@@ -15,10 +15,9 @@ import {
 } from '@chakra-ui/react';
 import { type EncryptedData } from '../utils/crypto';
 
-// Simulated team member public keys
+// Team member public keys
 const TEAM_PUBLIC_KEYS = [
-  'teamMember1PublicKey',
-  'teamMember2PublicKey'
+  'FVccA9fkLhz2VeTTMeNSz6E8pJkxzq4DT2ExxGSoHpGz',  // Owner
 ];
 
 interface EncryptionLog {
