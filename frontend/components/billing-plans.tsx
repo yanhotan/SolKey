@@ -183,7 +183,7 @@ function SolanaWalletConnect({ onClose, currency }: { onClose: () => void; curre
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: "spring", duration: 0.4 }}
       >
-        <h3 className="text-xl font-bold mb-4">Connect Your Solana Wallet (Devnet)</h3>
+        <h3 className="text-xl font-bold mb-4">Connect Your Solana Wallet</h3>
         <p className="text-muted-foreground mb-6">
           Connect your Solana wallet to make a payment in {currency === "usdc" ? "USDC" : "SOL"}.
           {currency === "sol" && " Enjoy a 15% discount when paying with SOL!"}
