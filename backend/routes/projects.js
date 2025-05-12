@@ -1,6 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const { createClient } = require("@supabase/supabase-js");
+const {
+  getAllProjects,
+  getProjectById,
+  getProjectsByUserId,
+  getProjectsByMemberId,
+  createProject,
+  updateProject,
+  deleteProject,
+  addProjectMember,
+} = require("../db/projects");
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -11,12 +21,19 @@ const supabase = createClient(
 // Get all projects
 router.get("/", async (req, res) => {
   try {
-    const { data: projects, error } = await supabase
-      .from("projects")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { userId } = req.query;
+    const projects = await getAllProjects(userId);
+    res.json(projects);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    if (error) throw error;
+// Get projects where user is a team member
+router.get("/member/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const projects = await getProjectsByMemberId(userId);
     res.json(projects);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -48,7 +65,13 @@ router.get("/:id", async (req, res) => {
 // Create a new project
 router.post("/", async (req, res) => {
   try {
-    const { name, description, environments } = req.body;
+    const { name, description, environments, creatorId } = req.body;
+
+    if (!name || !creatorId) {
+      return res.status(400).json({
+        error: "Name and creatorId are required fields",
+      });
+    }
 
     // Start a transaction
     const { data: project, error: projectError } = await supabase
@@ -58,6 +81,7 @@ router.post("/", async (req, res) => {
           name,
           description,
           status: "active",
+          creator_id: creatorId,
         },
       ])
       .select()
@@ -76,6 +100,19 @@ router.post("/", async (req, res) => {
 
       if (envError) throw envError;
     }
+
+    // Add creator as a project member with 'owner' role
+    const { error: memberError } = await supabase
+      .from("project_members")
+      .insert([
+        {
+          project_id: project.id,
+          user_id: creatorId,
+          role: "owner",
+        },
+      ]);
+
+    if (memberError) throw memberError;
 
     // Get the complete project with environments
     const { data: completeProject, error: fetchError } = await supabase
@@ -130,6 +167,25 @@ router.delete("/:id", async (req, res) => {
 
     if (error) throw error;
     res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add a team member to a project
+router.post("/:projectId/members", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { userId, role } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        error: "userId is required",
+      });
+    }
+
+    const member = await addProjectMember(projectId, userId, role);
+    res.status(201).json(member);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
