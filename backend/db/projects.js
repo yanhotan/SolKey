@@ -86,7 +86,7 @@ async function getProjectById(id) {
 
 // Create a new project
 async function createProject(projectData) {
-  const { name, description, environments } = projectData;
+  const { name, description, environments, creatorId } = projectData;
 
   // Start a transaction
   const { data: project, error: projectError } = await supabase
@@ -96,6 +96,7 @@ async function createProject(projectData) {
         name,
         description,
         status: "active",
+        creator_id: creatorId,
       },
     ])
     .select()
@@ -145,3 +146,12 @@ module.exports = {
   updateProject,
   deleteProject,
 };
+import * as projects from "./projects.js";
+
+export const {
+  getAllProjects,
+  getProjectById,
+  createProject,
+  updateProject,
+  deleteProject,
+} = projects;

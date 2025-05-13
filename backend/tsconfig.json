@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    // broaden rootDir so TS sees db/, lib/, and src/
+    "rootDir": ".",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "allowJs": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "strict": true
+  },
+  "include": [
+    "src/**/*",
+    "db/**/*",
+    "lib/**/*"
+  ]
+}
