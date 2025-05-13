@@ -89,17 +89,18 @@ export function DashboardOverview() {
     fetchSecrets();
   }, [connected, publicKey]);
 
-  // Initialize verification data structure for each secret
+  // Initialize verification data structure for each secret and auto-fetch encrypted data
   useEffect(() => {
     // Only initialize when there are secrets and wallet is connected
     if (!connected || !publicKey || secrets.length === 0) return;
       
     const newVerificationData: Record<string, VerificationData> = {};
+    const secretsToFetch: string[] = [];
 
-    // Initialize verification data for each secret - no auto-fetching
+    // Initialize verification data for each secret
     for (const secret of secrets) {
       // Skip if we already have data for this secret
-      if (verificationData[secret.id]) continue;
+      if (verificationData[secret.id] && verificationData[secret.id].encryptedData) continue;
       
       // Initialize data structure
       newVerificationData[secret.id] = {
@@ -107,17 +108,51 @@ export function DashboardOverview() {
         decryptedData: null,
         encryptedError: null,
         decryptedError: null,
-        isEncryptedLoading: false, // Not loading initially
-        isDecryptedLoading: false  // Not loading initially
+        isEncryptedLoading: true, // Set to true for auto-fetching
+        isDecryptedLoading: false
       };
+      
+      // Add to the list of secrets that need fetching
+      secretsToFetch.push(secret.id);
     }
     
-    // Only update if we have new secrets to initialize
+    // Update verification data first
     if (Object.keys(newVerificationData).length > 0) {
       setVerificationData(prev => ({
         ...prev,
         ...newVerificationData
       }));
+      
+      // Auto-fetch encrypted data for each secret
+      console.log(`Auto-fetching encrypted data for ${secretsToFetch.length} secrets`);
+      
+      // Create a function to fetch secrets sequentially to avoid overwhelming the API
+      const fetchSequentially = async () => {
+        for (const secretId of secretsToFetch) {
+          console.log(`Auto-fetching encrypted data for secret ${secretId}`);
+          const result = await fetchEncryptedData(secretId);
+          
+          // Update state with the result
+          setVerificationData(prev => ({
+            ...prev,
+            [secretId]: {
+              ...prev[secretId],
+              encryptedData: result?.data || null,
+              encryptedError: result?.error || null,
+              isEncryptedLoading: false
+            }
+          }));
+          
+          // Add a small delay between requests
+          if (secretsToFetch.length > 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+      };
+      
+      fetchSequentially().catch(err => {
+        console.error("Error in auto-fetch sequence:", err);
+      });
     }
   }, [secrets, connected, publicKey, verificationData]);
 
@@ -166,7 +201,31 @@ export function DashboardOverview() {
     }
   };
 
-  // Handle fetching encrypted data (without signature)
+  // Core function to fetch encrypted data (without state updates)
+  const fetchEncryptedData = async (secretId: string) => {
+    if (!connected || !publicKey) return null;
+
+    try {
+      const encryptedResult = await api.secrets.fetchEncrypted(secretId, {
+        walletAddress: publicKey.toBase58(),
+        // No signature needed for encrypted data
+      });
+
+      console.log(`Fetched encrypted data for secret ${secretId}:`, encryptedResult);
+      return {
+        data: encryptedResult,
+        error: null
+      };
+    } catch (err) {
+      console.error(`Failed to fetch encrypted data for secret ${secretId}:`, err);
+      return {
+        data: null,
+        error: err instanceof Error ? err.message : "Failed to fetch encrypted data"
+      };
+    }
+  };
+  
+  // Handle fetching encrypted data (with state updates - for UI button)
   const handleFetchEncrypted = async (secretId: string) => {
     if (!connected || !publicKey) return;
 
@@ -179,33 +238,17 @@ export function DashboardOverview() {
       }
     }));
 
-    try {
-      const encryptedResult = await api.secrets.fetchEncrypted(secretId, {
-        walletAddress: publicKey.toBase58(),
-        // No signature needed for encrypted data
-      });
+    const result = await fetchEncryptedData(secretId);
 
-      console.log("Fetched encrypted data:", encryptedResult);
-
-      setVerificationData(prev => ({
-        ...prev,
-        [secretId]: {
-          ...prev[secretId],
-          encryptedData: encryptedResult,
-          isEncryptedLoading: false
-        }
-      }));
-    } catch (err) {
-      console.error(`Failed to fetch encrypted data for secret ${secretId}:`, err);
-      setVerificationData(prev => ({
-        ...prev,
-        [secretId]: {
-          ...prev[secretId],
-          encryptedError: err instanceof Error ? err.message : "Failed to fetch encrypted data",
-          isEncryptedLoading: false
-        }
-      }));
-    }
+    setVerificationData(prev => ({
+      ...prev,
+      [secretId]: {
+        ...prev[secretId],
+        encryptedData: result?.data || null,
+        encryptedError: result?.error || null,
+        isEncryptedLoading: false
+      }
+    }));
   };
 
   // Render verification results with detailed information
