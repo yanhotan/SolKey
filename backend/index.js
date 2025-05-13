@@ -46,6 +46,7 @@ app.get("/api/test", (req, res) => {
 
 // Get all projects
 app.get("/api/projects", async (req, res) => {
+
   try {
     const projects = await getAllProjects();
     res.json(projects);

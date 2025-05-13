@@ -121,12 +121,13 @@ export function ProjectDetail({ id }: { id: string }) {
   const [environments, setEnvironments] = useState<string[]>([])
   const [showEditor, setShowEditor] = useState(false)
 
-  useEffect(() => {
-    if (project.environments && project.environments.length > 0) {
-      setEnvironments(project.environments)
-      setCurrentEnvironment(project.environments[0])
-    }
-  }, [project.id, project.environments])
+useEffect(() => {
+  if (project.environments && project.environments.length > 0) {
+    setEnvironments(project.environments)
+    setCurrentEnvironment(project.environments[0])
+  }
+}, [project.id, JSON.stringify(project.environments)])
+
 
   const handleAddEnvironment = () => {
     if (newEnvName.trim() && !environments.includes(newEnvName.toLowerCase())) {

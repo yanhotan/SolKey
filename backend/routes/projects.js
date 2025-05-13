@@ -49,7 +49,8 @@ router.get("/:id", async (req, res) => {
         `
         *,
         environments (*),
-        project_members (*)
+        project_members (*), 
+        secrets (*)
       `
       )
       .eq("id", req.params.id)
