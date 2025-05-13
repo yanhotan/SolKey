@@ -182,78 +182,28 @@ router.post("/:id/share", async (req, res) => {
 });
 
 // Decrypt and show secret value
-router.post("/:id/decrypt", async (req, res) => {
+router.post('/:id/decrypt', async (req, res) => {
   try {
     const { id } = req.params;
     const { walletAddress, signature } = req.body;
 
-    console.log("========= DECRYPTION PROCESS BEGIN =========");
-    console.log("Received decrypt request:", {
-      id,
+    // Input validation
+    if (!id || !walletAddress || !signature) {
+      return res.status(400).json({ error: "Missing required parameters" });
+    }
+
+    console.log(`Processing decrypt request for secret ${id}`, {
       walletAddress,
-      signatureLength: signature?.length,
+      signatureLength: signature?.length || 0,
     });
 
-    // Input validation
-    if (!id) {
-      return res.status(400).json({ error: "Secret ID is required" });
-    }
-
-    if (!walletAddress) {
-      return res.status(400).json({ error: "Wallet address is required" });
-    }
-
-    if (!signature) {
-      return res.status(400).json({ error: "Signature is required" });
-    }
-
-    // Step 1: Get the encrypted secret data
-    console.log("\n========= STEP 1: FETCH SECRET =========");
-    let secret;
-    try {
-      secret = await getSecret(id, walletAddress);
-      console.log("Secret data retrieved:", {
-        id: secret.id,
-        name: secret.name,
-        hasEncryptedValue: !!secret.encrypted_value,
-        ivLength: secret.iv?.length,
-        authTagLength: secret.auth_tag?.length,
-        // Also includes encrypted AES key data:
-        hasEncryptedAESKey: !!secret.encrypted_aes_key,
-        hasNonce: !!secret.nonce,
-        hasEphemeralPublicKey: !!secret.ephemeral_public_key,
-      });
-    } catch (error) {
-      console.error("Failed to get secret data:", error);
-      return res.status(404).json({ 
-        error: `Secret retrieval failed: ${error.message}`,
-        step: "database_fetch"
-      });
-    }
-
-    // Step 2: Verify the signature
-    console.log("\n========= STEP 2: VERIFY SIGNATURE =========");
+    // Step 1: Verify signature to authenticate the user
     try {
       const message = Buffer.from("auth-to-decrypt");
-      console.log("Message to verify:", message.toString());
-
-      // Convert wallet address to public key bytes using Solana's PublicKey
       const publicKey = new PublicKey(walletAddress);
       const publicKeyBytes = publicKey.toBytes();
-      console.log("Public key bytes length:", publicKeyBytes.length);
-
-      // Convert signature from base64 to Uint8Array
       const signatureBytes = Uint8Array.from(Buffer.from(signature, "base64"));
-      console.log("Signature bytes length:", signatureBytes.length);
-
-      // Convert message to Uint8Array
       const messageBytes = Uint8Array.from(message);
-
-      console.log("Verifying signature with:", {
-        messageLength: messageBytes.length,
-        signatureBytesLength: signatureBytes.length,
-        publicKeyBytesLength: publicKeyBytes.length,
-      });
 
       const isValid = nacl.sign.detached.verify(
         messageBytes,
@@ -261,177 +211,132 @@ router.post("/:id/decrypt", async (req, res) => {
         publicKeyBytes
       );
 
-      console.log("Signature verification result:", isValid);
-
       if (!isValid) {
-        return res.status(401).json({ 
-          error: "Invalid signature - Could not verify with your wallet's public key",
-          step: "signature_verification" 
-        });
-      }
-    } catch (error) {
-      console.error("Signature verification error:", {
-        error: error.message,
-        stack: error.stack,
-        walletAddress,
-        signatureLength: signature?.length,
-      });
-      return res.status(401).json({ 
-        error: `Invalid signature format: ${error.message}`,
-        step: "signature_verification"
-      });
-    }
-
-    // Step 3: Get the user's encrypted AES key
-    console.log("\n========= STEP 3: GET ENCRYPTED AES KEY =========");
-    console.log("Retrieving encrypted AES key information:");
-    console.log({
-      hasEncryptedAESKey: !!secret.encrypted_aes_key,
-      hasNonce: !!secret.nonce,
-      hasEphemeralPublicKey: !!secret.ephemeral_public_key
-    });
-
-    // Step 4: Derive private key from signature
-    console.log("\n========= STEP 4: DERIVE PRIVATE KEY FROM SIGNATURE =========");
-    let userPrivateKey;
-    try {
-      // This is a simplified approach - in production, you should use a secure method
-      // to get the private key that doesn't expose it in transit
-      const signatureBytes = Uint8Array.from(Buffer.from(signature, "base64"));
-      const messageBytes = Uint8Array.from(Buffer.from("auth-to-decrypt"));
-      
-      // Use signature as a source of entropy to derive a key for demo purposes
-      // In production, this should be replaced with proper key management
-      const privateKeyHash = crypto.createHash('sha256')
-        .update(Buffer.from([...messageBytes, ...signatureBytes]))
-        .digest();
-      
-      userPrivateKey = bs58.encode(privateKeyHash);
-      
-      console.log("Derived key for AES key decryption:", {
-        privateKeyType: typeof userPrivateKey,
-        privateKeyLength: userPrivateKey.length,
-        privateKeyPrefix: userPrivateKey.substring(0, 8) + '...'
-      });
-    } catch (error) {
-      console.error("Private key derivation error:", error);
-      return res.status(500).json({ 
-        error: `Failed to derive private key: ${error.message}`,
-        step: "private_key_derivation"
-      });
-    }
-
-    // Step 5: Decrypt the AES key
-    console.log("\n========= STEP 5: DECRYPT AES KEY =========");
-    let decryptedAESKey;
-    try {
-      // Decrypt the AES key using box.open with the user's private key
-      decryptedAESKey = decryptAESKeyForUser(
-        secret.encrypted_aes_key,
-        secret.nonce,
-        secret.ephemeral_public_key,
-        userPrivateKey
-      );
-      
-      console.log("AES key decrypted successfully:", {
-        keyLength: decryptedAESKey.length,
-        keyType: typeof decryptedAESKey,
-        isBuffer: Buffer.isBuffer(decryptedAESKey)
-      });
-    } catch (error) {
-      console.error("AES key decryption error:", error);
-      return res.status(500).json({ 
-        error: `Failed to decrypt AES key: ${error.message}`,
-        step: "aes_key_decryption"
-      });
-    }
-
-    // Step 6: Validate decryption inputs
-    console.log("\n========= STEP 6: VALIDATE DECRYPTION INPUTS =========");
-    try {
-      if (!secret.encrypted_value) {
-        throw new Error("Missing encrypted value");
+        console.error("Invalid signature provided for wallet", walletAddress);
+        return res.status(401).json({ error: "Invalid signature" });
       }
       
-      const iv = Buffer.from(secret.iv, "hex");
-      if (iv.length !== 16) {
-        throw new Error(`Invalid IV length: ${iv.length} (expected 16)`);
-      }
-      
-      const authTag = Buffer.from(secret.auth_tag, "hex");
-      if (authTag.length === 0) {
-        throw new Error("Missing authentication tag");
-      }
-      
-      console.log("Decryption inputs validated:", {
-        encryptedValueLength: secret.encrypted_value.length,
-        encryptedValuePrefix: secret.encrypted_value.substring(0, 20) + '...',
-        iv: secret.iv,
-        ivLength: iv.length,
-        authTag: secret.auth_tag,
-        authTagLength: authTag.length
-      });
+      console.log("Signature verified successfully");
     } catch (error) {
-      console.error("Input validation error:", error);
-      return res.status(400).json({ 
-        error: `Decryption input validation failed: ${error.message}`,
-        step: "input_validation"
-      });
+      console.error("Signature verification error:", error);
+      return res.status(401).json({ error: `Signature verification error: ${error.message}` });
     }
 
-    // Step 7: Decrypt the secret value
-    console.log("\n========= STEP 7: DECRYPT DATA WITH AES =========");
-    let decryptedValue;
-    try {
-      console.log("Calling decryptWithAES with:", {
-        encryptedDataLength: secret.encrypted_value.length,
-        keyLength: decryptedAESKey.length, 
-        ivLength: Buffer.from(secret.iv, "hex").length,
-        authTagLength: Buffer.from(secret.auth_tag, "hex").length
-      });
-      
-      decryptedValue = decryptWithAES(
-        secret.encrypted_value,
-        decryptedAESKey,  // Using properly decrypted AES key instead of derived key
-        Buffer.from(secret.iv, "hex"),
-        Buffer.from(secret.auth_tag, "hex")
-      );
-      
-      console.log("Decryption successful:", {
-        decryptedLength: decryptedValue.length,
-        decryptedPrefix: decryptedValue.substring(0, 20) + (decryptedValue.length > 20 ? '...' : '')
-      });
-    } catch (error) {
-      console.error("Decryption error:", error);
-      return res.status(500).json({ 
-        error: `Decryption failed: ${error.message}`,
-        step: "decryption",
-        details: {
-          aesKeyLength: decryptedAESKey.length,
-          encryptedValuePrefix: secret.encrypted_value.substring(0, 20) + '...',
-          ivLength: Buffer.from(secret.iv, "hex").length,
-          authTagLength: Buffer.from(secret.auth_tag, "hex").length
-        }
-      });
+    // Step 2: Check if user has access to this secret (has an encrypted key)
+    console.log("Checking user access rights to secret");
+    const { data: secretKey, error: secretKeyError } = await supabase
+      .from("secret_keys")
+      .select("*")
+      .eq("secret_id", id)
+      .eq("wallet_address", walletAddress)
+      .single();
+
+    if (secretKeyError) {
+      console.error("Error fetching secret key access:", secretKeyError);
+      if (secretKeyError.code === 'PGRST116') {
+        return res.status(403).json({ error: "You don't have access to this secret" });
+      }
+      throw secretKeyError;
     }
 
-    console.log("========= DECRYPTION PROCESS COMPLETE =========");
-    
-    // Return the decrypted secret
-    res.json({
-      id: secret.id,
+    if (!secretKey) {
+      return res.status(403).json({ error: "No access to this secret" });
+    }
+
+    // Step 3: Get the actual secret data
+    console.log("Fetching secret data");
+    const { data: secret, error: secretError } = await supabase
+      .from("secrets")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (secretError) {
+      console.error("Error fetching secret:", secretError);
+      throw secretError;
+    }
+
+    // Step 4: Return the encrypted data for client-side decryption
+    return res.json({
+      // Secret data
+      encrypted_value: secret.encrypted_value,
+      iv: secret.iv,
+      auth_tag: secret.auth_tag,
       name: secret.name,
-      value: decryptedValue,
       type: secret.type,
-      created_at: secret.created_at,
-      updated_at: secret.updated_at,
+      
+      // Key data 
+      encrypted_aes_key: secretKey.encrypted_aes_key,
+      nonce: secretKey.nonce, 
+      ephemeral_public_key: secretKey.ephemeral_public_key
     });
   } catch (error) {
-    console.error("Decrypt endpoint error:", error);
-    res.status(500).json({ 
-      error: `Decryption process failed: ${error.message}`,
-      step: "unknown"
+    console.error('Error processing decrypt request:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint to just fetch encrypted data (without attempting decryption)
+router.post("/:id/fetchEncrypted", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { walletAddress } = req.body;
+
+    // Input validation
+    if (!id || !walletAddress) {
+      return res.status(400).json({ error: "Missing required parameters" });
+    }
+
+    console.log(`Fetching encrypted data for secret ${id}`);
+    
+    // Signature is no longer required for fetching encrypted data
+    // We only need to check if the wallet has access to this secret
+
+    // Step 2: Check if user has access to this secret
+    const { data: secretKey, error: secretKeyError } = await supabase
+      .from("secret_keys")
+      .select("*")
+      .eq("secret_id", id)
+      .eq("wallet_address", walletAddress)
+      .single();
+
+    if (secretKeyError) {
+      if (secretKeyError.code === 'PGRST116') {
+        return res.status(403).json({ error: "You don't have access to this secret" });
+      }
+      throw secretKeyError;
+    }
+
+    // Step 3: Get the actual secret data
+    const { data: secret, error: secretError } = await supabase
+      .from("secrets")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (secretError) {
+      throw secretError;
+    }
+
+    // Return both the secret and the key info
+    return res.json({
+      secret: {
+        id: secret.id,
+        name: secret.name,
+        encrypted_value: secret.encrypted_value,
+        iv: secret.iv,
+        auth_tag: secret.auth_tag,
+        type: secret.type,
+      },
+      aesKeyInfo: {
+        encrypted_aes_key: secretKey.encrypted_aes_key,
+        nonce: secretKey.nonce,
+        ephemeral_public_key: secretKey.ephemeral_public_key,
+      }
     });
+  } catch (error) {
+    console.error('Error fetching encrypted data:', error);
+    return res.status(500).json({ error: error.message });
   }
 });
 
@@ -455,9 +360,29 @@ router.post("/:id/diagnostic", async (req, res) => {
 
     // Step 1: Get the encrypted secret data
     console.log("\n========= STEP 1: FETCH SECRET =========");
-    let secret;
+    let secret, secretKey;
     try {
-      secret = await getSecret(id, walletAddress);
+      // Get the secret data
+      const { data: secretData, error: secretError } = await supabase
+        .from("secrets")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (secretError) throw secretError;
+      secret = secretData;
+
+      // Get the secret key for this user
+      const { data: secretKeyData, error: secretKeyError } = await supabase
+        .from("secret_keys")
+        .select("*")
+        .eq("secret_id", id)
+        .eq("wallet_address", walletAddress)
+        .single();
+
+      if (secretKeyError) throw secretKeyError;
+      secretKey = secretKeyData;
+
       console.log("Secret data retrieved:", {
         id: secret.id,
         name: secret.name,
@@ -465,12 +390,12 @@ router.post("/:id/diagnostic", async (req, res) => {
         encryptedValueLength: secret.encrypted_value?.length,
         ivLength: secret.iv?.length,
         authTagLength: secret.auth_tag?.length,
-        hasEncryptedAESKey: !!secret.encrypted_aes_key,
-        encryptedAESKeyLength: secret.encrypted_aes_key?.length,
-        hasNonce: !!secret.nonce,
-        nonceLength: secret.nonce?.length,
-        hasEphemeralPublicKey: !!secret.ephemeral_public_key,
-        ephemeralPublicKeyLength: secret.ephemeral_public_key?.length,
+        hasEncryptedAESKey: !!secretKey.encrypted_aes_key,
+        encryptedAESKeyLength: secretKey.encrypted_aes_key?.length,
+        hasNonce: !!secretKey.nonce,
+        nonceLength: secretKey.nonce?.length,
+        hasEphemeralPublicKey: !!secretKey.ephemeral_public_key,
+        ephemeralPublicKeyLength: secretKey.ephemeral_public_key?.length,
       });
     } catch (error) {
       console.error("Failed to get secret data:", error);
@@ -509,46 +434,19 @@ router.post("/:id/diagnostic", async (req, res) => {
       });
     }
 
-    // Step 3: Derive private key from signature (for demonstration only)
-    console.log("\n========= STEP 3: DERIVE PRIVATE KEY =========");
-    let userPrivateKey;
-    try {
-      const signatureBytes = Uint8Array.from(Buffer.from(signature, "base64"));
-      const messageBytes = Uint8Array.from(Buffer.from("auth-to-decrypt"));
-      
-      // Use signature as entropy source (DEMO ONLY - NOT SECURE FOR PRODUCTION)
-      const privateKeyHash = crypto.createHash('sha256')
-        .update(Buffer.from([...messageBytes, ...signatureBytes]))
-        .digest();
-      
-      userPrivateKey = bs58.encode(privateKeyHash);
-      
-      console.log("Derived private key:", {
-        type: typeof userPrivateKey,
-        length: userPrivateKey.length,
-        prefix: userPrivateKey.substring(0, 8) + '...'
-      });
-    } catch (error) {
-      return res.status(500).json({ 
-        error: `Private key derivation error: ${error.message}`,
-        step: "private_key_derivation"
-      });
-    }
-
     return res.json({
-      message: "Diagnostic successful",
+      message: "Diagnostic successful - Signature verified and data access confirmed",
       secretInfo: {
         id: secret.id,
         name: secret.name,
         encryptedValueLength: secret.encrypted_value?.length || 0,
-        encryptedAESKeyLength: secret.encrypted_aes_key?.length || 0,
+        encryptedAESKeyLength: secretKey.encrypted_aes_key?.length || 0,
         ivLength: Buffer.from(secret.iv || "", "hex").length,
         authTagLength: Buffer.from(secret.auth_tag || "", "hex").length,
-        nonceLength: secret.nonce?.length || 0,
-        ephemeralPublicKeyLength: secret.ephemeral_public_key?.length || 0,
+        nonceLength: secretKey.nonce?.length || 0,
+        ephemeralPublicKeyLength: secretKey.ephemeral_public_key?.length || 0,
       },
-      signatureVerified: true,
-      privateKeyDerivationSuccessful: !!userPrivateKey
+      signatureVerified: true
     });
   } catch (error) {
     console.error("Diagnostic error:", error);
@@ -556,6 +454,104 @@ router.post("/:id/diagnostic", async (req, res) => {
       error: `Diagnostic failed: ${error.message}`,
       step: "unknown"
     });
+  }
+});
+
+// Get all secrets metadata for a wallet (without signature verification)
+router.get("/metadata", async (req, res) => {
+  try {
+    const { walletAddress } = req.query;
+
+    if (!walletAddress) {
+      return res.status(400).json({
+        error: "Wallet address is required",
+      });
+    }
+
+    console.log(`Fetching secrets metadata for wallet ${walletAddress}`);
+
+    // Find all secret_keys associated with this wallet
+    const { data: secretKeys, error: secretKeysError } = await supabase
+      .from("secret_keys")
+      .select("secret_id")
+      .eq("wallet_address", walletAddress);
+
+    if (secretKeysError) {
+      console.error("Error fetching secret keys:", secretKeysError);
+      throw secretKeysError;
+    }
+
+    if (!secretKeys || secretKeys.length === 0) {
+      return res.json({ secrets: [] });
+    }
+
+    // Get the secret IDs
+    const secretIds = secretKeys.map(key => key.secret_id);
+
+    // Get all secrets basic metadata
+    const { data: secrets, error: secretsError } = await supabase
+      .from("secrets")
+      .select("id, name, type, project_id, environment_id")
+      .in("id", secretIds);
+
+    if (secretsError) {
+      console.error("Error fetching secrets:", secretsError);
+      throw secretsError;
+    }
+
+    // Get project info for each secret
+    const projectIds = [...new Set(secrets.map(s => s.project_id))];
+    const { data: projects, error: projectsError } = await supabase
+      .from("projects")
+      .select("id, name")
+      .in("id", projectIds);
+
+    if (projectsError) {
+      console.error("Error fetching projects:", projectsError);
+      throw projectsError;
+    }
+
+    // Map project names to secrets
+    const projectMap = {};
+    if (projects) {
+      projects.forEach(p => {
+        projectMap[p.id] = p.name;
+      });
+    }
+
+    // Get environment info for each secret
+    const envIds = [...new Set(secrets.map(s => s.environment_id))];
+    const { data: environments, error: envsError } = await supabase
+      .from("environments")
+      .select("id, name")
+      .in("id", envIds);
+
+    if (envsError) {
+      console.error("Error fetching environments:", envsError);
+      throw envsError;
+    }
+
+    // Map environment names to secrets
+    const envMap = {};
+    if (environments) {
+      environments.forEach(e => {
+        envMap[e.id] = e.name;
+      });
+    }
+
+    // Combine all data
+    const secretsWithDetails = secrets.map(secret => ({
+      id: secret.id,
+      name: secret.name,
+      type: secret.type,
+      projectName: projectMap[secret.project_id] || "Unknown Project",
+      environmentName: envMap[secret.environment_id] || "Unknown Environment"
+    }));
+
+    res.json({ secrets: secretsWithDetails });
+  } catch (error) {
+    console.error("Error in get secrets metadata:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
