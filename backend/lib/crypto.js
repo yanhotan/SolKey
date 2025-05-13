@@ -3,7 +3,9 @@ const { PublicKey } = require("@solana/web3.js");
 const nacl = require("tweetnacl");
 const util = require("tweetnacl-util");
 const bs58 = require("bs58");
-const { convertPublicKeyToX25519 } = require("ed2curve");
+const ed2curve = require("ed2curve");
+const convertPublicKey = ed2curve.convertPublicKey; 
+const convertSecretKey = ed2curve.convertSecretKey;
 const { supabase } = require("./supabase");
 
 // Constants
@@ -16,15 +18,29 @@ function generateAESKey() {
 
 function encryptAESKeyForUser(aesKey, userPublicKeyBase58) {
   try {
+    console.log("Encrypting AES key for wallet:", userPublicKeyBase58);
+    
     // Convert Solana public key (base58) to bytes
-    const ed25519PublicKey = bs58.decode(userPublicKeyBase58);
-    if (!ed25519PublicKey) {
-      throw new Error("Invalid public key format");
+    let ed25519PublicKey;
+    try {
+      ed25519PublicKey = bs58.decode(userPublicKeyBase58);
+      console.log("Public key decoded successfully", { 
+        length: ed25519PublicKey.length, 
+        type: typeof ed25519PublicKey,
+        isBuffer: Buffer.isBuffer(ed25519PublicKey)
+      });
+    } catch (decodeError) {
+      console.error("bs58 decode error:", decodeError);
+      throw new Error(`Failed to decode public key: ${decodeError.message}`);
+    }
+    
+    if (!ed25519PublicKey || ed25519PublicKey.length !== 32) {
+      throw new Error(`Invalid public key format or length: ${ed25519PublicKey?.length}`);
     }
 
     // Convert Ed25519 public key to X25519
-    const x25519PublicKey = convertPublicKeyToX25519(ed25519PublicKey);
-    if (!x25519PublicKey) throw new Error("Invalid public key conversion");
+    const x25519PublicKey = convertPublicKey(ed25519PublicKey);
+    if (!x25519PublicKey) throw new Error("Invalid public key conversion to X25519");
 
     // Generate ephemeral keypair
     const ephemeralKeypair = nacl.box.keyPair();
@@ -44,6 +60,7 @@ function encryptAESKeyForUser(aesKey, userPublicKeyBase58) {
       ephemeralPublicKey: util.encodeBase64(ephemeralKeypair.publicKey),
     };
   } catch (error) {
+    console.error("AES key encryption error:", error);
     throw new Error(`Failed to encrypt AES key: ${error.message}`);
   }
 }
@@ -84,10 +101,16 @@ function decryptAESKeyForUser(
 ) {
   try {
     // Convert Solana private key (base58) to bytes
-    const ed25519PrivateKey = bs58.decode(userPrivateKeyBase58);
+    let ed25519PrivateKey;
+    try {
+      ed25519PrivateKey = bs58.decode(userPrivateKeyBase58);
+    } catch (decodeError) {
+      console.error("bs58 decode error:", decodeError);
+      throw new Error(`Failed to decode private key: ${decodeError.message}`);
+    }
 
     // Convert Ed25519 private key to X25519
-    const x25519PrivateKey = convertPublicKeyToX25519(ed25519PrivateKey);
+    const x25519PrivateKey = convertSecretKey(ed25519PrivateKey);
     if (!x25519PrivateKey) throw new Error("Invalid private key conversion");
 
     // Convert base64 strings to Uint8Arrays
@@ -109,6 +132,7 @@ function decryptAESKeyForUser(
 
     return decryptedAESKey;
   } catch (error) {
+    console.error("AES key decryption error:", error);
     throw new Error(`Failed to decrypt AES key: ${error.message}`);
   }
 }
@@ -123,6 +147,15 @@ async function createSecret(
   creatorWalletAddress
 ) {
   try {
+    console.log("Creating secret:", { 
+      projectId, 
+      environmentId, 
+      name, 
+      valueLength: value?.length, 
+      type,
+      creatorWalletAddress
+    });
+    
     // Generate random AES key
     const secretKey = crypto.randomBytes(32); // 256-bit AES key
 
@@ -136,6 +169,8 @@ async function createSecret(
       .eq("project_id", projectId);
 
     if (membersError) throw membersError;
+    
+    console.log(`Found ${members.length} project members to encrypt for`);
 
     // Store the secret data (encrypted value)
     const { data: secret, error: secretError } = await supabase
@@ -155,9 +190,12 @@ async function createSecret(
       .single();
 
     if (secretError) throw secretError;
+    
+    console.log("Secret data stored successfully with ID:", secret.id);
 
     // Encrypt AES key for each member
     for (const member of members) {
+      console.log(`Encrypting for member: ${member.wallet_address}`);
       const { encryptedAESKey, nonce, ephemeralPublicKey } =
         encryptAESKeyForUser(secretKey, member.wallet_address);
 
@@ -182,6 +220,7 @@ async function createSecret(
       message: "Secret created securely with E2EE",
     };
   } catch (error) {
+    console.error("Secret creation error:", error);
     throw new Error(`Failed to create secret: ${error.message}`);
   }
 }
@@ -211,8 +250,6 @@ async function getSecret(secretId, walletAddress) {
     // Return only the encrypted data
     return {
       id: secret.id,
-      project_id: secret.project_id,
-      environment_id: secret.environment_id,
       name: secret.name,
       encrypted_value: secret.encrypted_value,
       type: secret.type,
@@ -220,8 +257,14 @@ async function getSecret(secretId, walletAddress) {
       auth_tag: secret.auth_tag,
       created_at: secret.created_at,
       updated_at: secret.updated_at,
+      project_id: secret.project_id,
+      environment_id: secret.environment_id,
+      encrypted_aes_key: keyData.encrypted_aes_key,
+      nonce: keyData.nonce,
+      ephemeral_public_key: keyData.ephemeral_public_key,
     };
   } catch (error) {
+    console.error("Get secret error:", error);
     throw new Error(`Failed to get secret: ${error.message}`);
   }
 }
@@ -271,8 +314,8 @@ async function shareSecret(
           secret_id: secretId,
           wallet_address: targetWalletAddress,
           encrypted_aes_key: creatorKey.encrypted_aes_key,
-          iv: creatorKey.iv,
-          auth_tag: creatorKey.auth_tag,
+          nonce: creatorKey.nonce,
+          ephemeral_public_key: creatorKey.ephemeral_public_key,
         },
       ]);
 
@@ -280,6 +323,7 @@ async function shareSecret(
 
     return { message: "Secret shared successfully" };
   } catch (error) {
+    console.error("Share secret error:", error);
     throw new Error(`Failed to share secret: ${error.message}`);
   }
 }
@@ -289,4 +333,6 @@ module.exports = {
   getSecret,
   shareSecret,
   decryptWithAES,
+  decryptAESKeyForUser,
+  encryptAESKeyForUser,
 };

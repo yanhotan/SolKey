@@ -48,7 +48,8 @@ CREATE TABLE secret_keys (
     secret_id UUID REFERENCES secrets(id) ON DELETE CASCADE,
     wallet_address VARCHAR(44) NOT NULL,
     encrypted_aes_key TEXT NOT NULL,
-    iv VARCHAR(32) NOT NULL,
+    nonce VARCHAR(32) NOT NULL,
+    ephemeral_public_key TEXT NOT NULL,
     auth_tag VARCHAR(32) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(secret_id, wallet_address)
