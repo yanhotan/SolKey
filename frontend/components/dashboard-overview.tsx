@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { FolderKanban, Users, Key, GitBranch, LoaderCircle, CheckCircle2, XCircle } from "lucide-react";
 import SecretViewer from "./secret-viewer";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -88,105 +89,167 @@ export function DashboardOverview() {
     fetchSecrets();
   }, [connected, publicKey]);
 
-  // Verify encryption and decryption for each secret
+  // Initialize verification data structure for each secret and auto-fetch encrypted data
   useEffect(() => {
-    const verifySecrets = async () => {
-      if (!connected || !publicKey || !signMessage || secrets.length === 0) return;
+    // Only initialize when there are secrets and wallet is connected
+    if (!connected || !publicKey || secrets.length === 0) return;
       
-      const newVerificationData: Record<string, VerificationData> = {};
+    const newVerificationData: Record<string, VerificationData> = {};
+    const secretsToFetch: string[] = [];
 
-      for (const secret of secrets) {
-        // Initialize verification data for this secret
-        newVerificationData[secret.id] = {
-          encryptedData: null,
-          decryptedData: null,
-          encryptedError: null,
-          decryptedError: null,
-          isEncryptedLoading: true,
-          isDecryptedLoading: true
-        };
-        
-        setVerificationData(prev => ({
-          ...prev,
-          [secret.id]: newVerificationData[secret.id]
-        }));
-        
-        // First fetch encrypted data
-        try {
-          // Sign message for auth
-          const message = new TextEncoder().encode("auth-to-decrypt");
-          const signature = await signMessage(message);
-          const signatureBase64 = Buffer.from(signature).toString("base64");
+    // Initialize verification data for each secret
+    for (const secret of secrets) {
+      // Skip if we already have data for this secret
+      if (verificationData[secret.id] && verificationData[secret.id].encryptedData) continue;
+      
+      // Initialize data structure
+      newVerificationData[secret.id] = {
+        encryptedData: null,
+        decryptedData: null,
+        encryptedError: null,
+        decryptedError: null,
+        isEncryptedLoading: true, // Set to true for auto-fetching
+        isDecryptedLoading: false
+      };
+      
+      // Add to the list of secrets that need fetching
+      secretsToFetch.push(secret.id);
+    }
+    
+    // Update verification data first
+    if (Object.keys(newVerificationData).length > 0) {
+      setVerificationData(prev => ({
+        ...prev,
+        ...newVerificationData
+      }));
+      
+      // Auto-fetch encrypted data for each secret
+      console.log(`Auto-fetching encrypted data for ${secretsToFetch.length} secrets`);
+      
+      // Create a function to fetch secrets sequentially to avoid overwhelming the API
+      const fetchSequentially = async () => {
+        for (const secretId of secretsToFetch) {
+          console.log(`Auto-fetching encrypted data for secret ${secretId}`);
+          const result = await fetchEncryptedData(secretId);
           
-          const encryptedResult = await api.secrets.fetchEncrypted(secret.id, {
-            walletAddress: publicKey.toBase58(),
-            signature: signatureBase64
-          });
-          
-          newVerificationData[secret.id] = {
-            ...newVerificationData[secret.id],
-            encryptedData: encryptedResult,
-            isEncryptedLoading: false
-          };
-          
+          // Update state with the result
           setVerificationData(prev => ({
             ...prev,
-            [secret.id]: {
-              ...prev[secret.id],
-              encryptedData: encryptedResult,
+            [secretId]: {
+              ...prev[secretId],
+              encryptedData: result?.data || null,
+              encryptedError: result?.error || null,
               isEncryptedLoading: false
             }
           }));
           
-          // Now try to decrypt
-          try {
-            // Sign message for auth (needs a fresh signature)
-            const message = new TextEncoder().encode("auth-to-decrypt");
-            const signature = await signMessage(message);
-            const signatureBase64 = Buffer.from(signature).toString("base64");
-            
-            const decryptedResult = await api.secrets.decrypt(secret.id, {
-              walletAddress: publicKey.toBase58(),
-              signature: signatureBase64
-            });
-            
-            setVerificationData(prev => ({
-              ...prev,
-              [secret.id]: {
-                ...prev[secret.id],
-                decryptedData: decryptedResult,
-                isDecryptedLoading: false
-              }
-            }));
-          } catch (decryptErr) {
-            console.error(`Failed to decrypt secret ${secret.id}:`, decryptErr);
-            setVerificationData(prev => ({
-              ...prev,
-              [secret.id]: {
-                ...prev[secret.id],
-                decryptedError: decryptErr instanceof Error ? decryptErr.message : "Failed to decrypt secret",
-                isDecryptedLoading: false
-              }
-            }));
+          // Add a small delay between requests
+          if (secretsToFetch.length > 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
-        } catch (encryptErr) {
-          console.error(`Failed to fetch encrypted data for secret ${secret.id}:`, encryptErr);
-          setVerificationData(prev => ({
-            ...prev,
-            [secret.id]: {
-              ...prev[secret.id],
-              encryptedError: encryptErr instanceof Error ? encryptErr.message : "Failed to fetch encrypted data",
-              isEncryptedLoading: false,
-              isDecryptedLoading: false,
-              decryptedError: "Cannot decrypt without encrypted data"
-            }
-          }));
         }
+      };
+      
+      fetchSequentially().catch(err => {
+        console.error("Error in auto-fetch sequence:", err);
+      });
+    }
+  }, [secrets, connected, publicKey, verificationData]);
+
+  // Handle decryption
+  const handleDecrypt = async (secretId: string) => {
+    if (!connected || !publicKey || !signMessage) return;
+
+    setVerificationData(prev => ({
+      ...prev,
+      [secretId]: {
+        ...prev[secretId],
+        isDecryptedLoading: true,
+        decryptedError: null
       }
-    };
-    
-    verifySecrets();
-  }, [secrets, connected, publicKey, signMessage]);
+    }));
+
+    try {
+      // Sign message for auth
+      const message = new TextEncoder().encode("auth-to-decrypt");
+      const signature = await signMessage(message);
+      const signatureBase64 = Buffer.from(signature).toString("base64");
+
+      const decryptedResult = await api.secrets.decrypt(secretId, {
+        walletAddress: publicKey.toBase58(),
+        signature: signatureBase64
+      });
+
+      setVerificationData(prev => ({
+        ...prev,
+        [secretId]: {
+          ...prev[secretId],
+          decryptedData: decryptedResult,
+          isDecryptedLoading: false
+        }
+      }));
+    } catch (decryptErr) {
+      console.error(`Failed to decrypt secret ${secretId}:`, decryptErr);
+      setVerificationData(prev => ({
+        ...prev,
+        [secretId]: {
+          ...prev[secretId],
+          decryptedError: decryptErr instanceof Error ? decryptErr.message : "Failed to decrypt secret",
+          isDecryptedLoading: false
+        }
+      }));
+    }
+  };
+
+  // Core function to fetch encrypted data (without state updates)
+  const fetchEncryptedData = async (secretId: string) => {
+    if (!connected || !publicKey) return null;
+
+    try {
+      const encryptedResult = await api.secrets.fetchEncrypted(secretId, {
+        walletAddress: publicKey.toBase58(),
+        // No signature needed for encrypted data
+      });
+
+      console.log(`Fetched encrypted data for secret ${secretId}:`, encryptedResult);
+      return {
+        data: encryptedResult,
+        error: null
+      };
+    } catch (err) {
+      console.error(`Failed to fetch encrypted data for secret ${secretId}:`, err);
+      return {
+        data: null,
+        error: err instanceof Error ? err.message : "Failed to fetch encrypted data"
+      };
+    }
+  };
+  
+  // Handle fetching encrypted data (with state updates - for UI button)
+  const handleFetchEncrypted = async (secretId: string) => {
+    if (!connected || !publicKey) return;
+
+    setVerificationData(prev => ({
+      ...prev,
+      [secretId]: {
+        ...prev[secretId],
+        isEncryptedLoading: true,
+        encryptedError: null
+      }
+    }));
+
+    const result = await fetchEncryptedData(secretId);
+
+    setVerificationData(prev => ({
+      ...prev,
+      [secretId]: {
+        ...prev[secretId],
+        encryptedData: result?.data || null,
+        encryptedError: result?.error || null,
+        isEncryptedLoading: false
+      }
+    }));
+  };
 
   // Render verification results with detailed information
   const renderVerificationResults = (secret: Secret) => {
@@ -198,7 +261,7 @@ export function DashboardOverview() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Secret Verification: {secret.name}</CardTitle>
-            <div className="flex space-x-2">
+            <div className="flex space-x-4 items-center">
               <div className="flex items-center">
                 <span className="mr-2">Encrypted:</span>
                 {data.isEncryptedLoading ? (
@@ -219,6 +282,24 @@ export function DashboardOverview() {
                   <XCircle className="h-5 w-5 text-red-500" />
                 )}
               </div>
+              <Button 
+                variant="outline"
+                disabled={data.isEncryptedLoading}
+                onClick={() => handleFetchEncrypted(secret.id)}
+                className="ml-4"
+              >
+                <LoaderCircle className={`h-4 w-4 mr-2 ${data.isEncryptedLoading ? 'animate-spin' : ''}`} />
+                Fetch Encrypted
+              </Button>
+              <Button 
+                variant="outline"
+                disabled={!data.encryptedData || data.isDecryptedLoading}
+                onClick={() => handleDecrypt(secret.id)}
+                className="ml-4"
+              >
+                <Key className="h-4 w-4 mr-2" />
+                Decrypt Data
+              </Button>
             </div>
           </div>
         </CardHeader>

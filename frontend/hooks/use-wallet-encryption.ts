@@ -14,20 +14,31 @@ export interface UseWalletEncryptionReturn {
   error: string | null;
 }
 
+// Storage keys
+const WALLET_ADDRESS_STORAGE_KEY = 'solkey:walletAddress';
+
 export function useWalletEncryption(): UseWalletEncryptionReturn {
   const { publicKey, signMessage, connected } = useWallet();
   const [isInitialized, setIsInitialized] = useState(hasEncryptionKey());
   const [error, setError] = useState<string | null>(null);
 
-  // Clear encryption key and state when wallet disconnects
+  // Check if wallet is initialized on mount and when connection changes
   useEffect(() => {
     if (!connected) {
       clearEncryptionKey();
+      localStorage.removeItem(WALLET_ADDRESS_STORAGE_KEY);
       setIsInitialized(false);
     } else {
       setIsInitialized(hasEncryptionKey());
     }
   }, [connected]);
+
+  // Store wallet address when publicKey changes
+  useEffect(() => {
+    if (connected && publicKey) {
+      localStorage.setItem(WALLET_ADDRESS_STORAGE_KEY, publicKey.toBase58());
+    }
+  }, [connected, publicKey]);
 
   const handleSignMessage = useCallback(async () => {
     if (!publicKey || !signMessage) {
@@ -37,9 +48,15 @@ export function useWalletEncryption(): UseWalletEncryptionReturn {
 
     try {
       setError(null);
+      
+      // Always store the wallet address
+      localStorage.setItem(WALLET_ADDRESS_STORAGE_KEY, publicKey.toBase58());
+      
+      // Sign the message
       const message = new TextEncoder().encode(WALLET_CONFIG.signatureMessage);
       const signature = await signMessage(message);
       const key = await deriveEncryptionKey(WALLET_CONFIG.signatureMessage, bs58.encode(signature));
+      
       setIsInitialized(true);
       return key;
     } catch (err) {
