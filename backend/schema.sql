@@ -38,8 +38,7 @@ CREATE TABLE secrets (
     iv VARCHAR(32) NOT NULL,
     auth_tag VARCHAR(32) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(project_id, environment_id, name)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create secret_keys table for storing encrypted AES keys
