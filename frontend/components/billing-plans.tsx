@@ -344,16 +344,18 @@ function SolanaWalletConnect({
         <BillingPayment
           onClose={onClose}
           onSuccess={() => {
-            // Handle successful payment (e.g., update subscription status)
-            toast.success("Subscription upgraded successfully!");
-            onClose();
+            setTimeout(() => {
+      toast.success("Subscription upgraded successfully!");
+      onClose();
+            }, 3000);
           }}
           onError={(error) => {
             console.error("Payment error:", error);
             toast.error("Payment failed. Please try again.");
             setShowPayment(false); // Go back to wallet connection
           }}
-          amount={currency === "sol" ? 0.5 : 20} // Use appropriate amount based on currency
+          amount={currency === "sol" ? 0.5 : 20}
+          currency={currency}
         />
       )}
     </>
