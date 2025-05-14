@@ -112,31 +112,83 @@ router.get("/", async (req, res) => {
 // Create a new secret
 router.post("/", async (req, res) => {
   try {
-    const { projectId, environmentId, name, value, type, walletAddress } =
-      req.body;
+    const { 
+      name, 
+      type, 
+      encrypted_value, 
+      iv, 
+      project_id, 
+      environment_id, 
+      wallet_address,
+      encrypted_aes_key,
+      nonce,
+      ephemeral_public_key
+    } = req.body;
 
-    if (
-      !projectId ||
-      !environmentId ||
-      !name ||
-      !value ||
-      !type ||
-      !walletAddress
-    ) {
-      return res.status(400).json({ error: "Missing required fields" });
+    // Validate required fields
+    if (!name || !type || !encrypted_value || !iv || !wallet_address || !project_id || !environment_id) {
+      return res.status(400).json({ 
+        error: "Missing required fields",
+        required: "name, type, encrypted_value, iv, wallet_address, project_id, environment_id" 
+      });
+    }
+    
+    console.log(`Creating secret '${name}' for wallet ${wallet_address}`, {
+      type,
+      project_id,
+      environment_id
+    });
+    
+    // The data is already encrypted by the frontend, so we just store it
+    const { data: secret, error: secretError } = await supabase
+      .from("secrets")
+      .insert([
+        {
+          project_id,
+          environment_id,
+          name,
+          encrypted_value,
+          type,
+          iv,
+        },
+      ])
+      .select()
+      .single();
+
+    if (secretError) {
+      console.error("Error creating secret:", secretError);
+      throw secretError;
+    }
+    
+    console.log(`Secret created with ID: ${secret.id}`);
+    
+    // Create a record in secret_keys to track access
+    const { error: keyError } = await supabase
+      .from("secret_keys")
+      .insert([
+        {
+          secret_id: secret.id,
+          wallet_address,
+          encrypted_aes_key: encrypted_aes_key || 'frontend-encrypted',
+          nonce: nonce || 'frontend-encrypted',
+          ephemeral_public_key: ephemeral_public_key || 'frontend-encrypted',
+        },
+      ]);
+
+    if (keyError) {
+      console.error("Error creating secret_key access:", keyError);
+      throw keyError;
     }
 
-    const secret = await createSecret(
-      projectId,
-      environmentId,
-      name,
-      value,
-      type,
-      walletAddress
-    );
-
-    res.status(201).json(secret);
+    res.status(201).json({ 
+      id: secret.id,
+      name: secret.name,
+      type: secret.type,
+      project_id: secret.project_id,
+      environment_id: secret.environment_id
+    });
   } catch (error) {
+    console.error("Error creating secret:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -145,16 +197,53 @@ router.post("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { walletAddress, privateKey } = req.query;
+    const { walletAddress } = req.query;
 
-    if (!walletAddress || !privateKey) {
+    if (!walletAddress) {
       return res.status(400).json({
-        error: "Wallet address and private key are required",
+        error: "Wallet address is required",
       });
     }
 
-    const secret = await getSecret(id, walletAddress, privateKey);
-    res.json(secret);
+    // Check if user has access to this secret
+    const { data: secretKey, error: secretKeyError } = await supabase
+      .from("secret_keys")
+      .select("*")
+      .eq("secret_id", id)
+      .eq("wallet_address", walletAddress)
+      .single();
+
+    if (secretKeyError) {
+      if (secretKeyError.code === 'PGRST116') {
+        return res.status(403).json({ error: "You don't have access to this secret" });
+      }
+      throw secretKeyError;
+    }
+
+    // Get the actual secret data
+    const { data: secret, error: secretError } = await supabase
+      .from("secrets")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (secretError) {
+      throw secretError;
+    }
+
+    // Return data for client-side decryption
+    res.json({
+      id: secret.id,
+      name: secret.name,
+      encrypted_value: secret.encrypted_value,
+      iv: secret.iv,
+      type: secret.type,
+      project_id: secret.project_id,
+      environment_id: secret.environment_id,
+      encrypted_aes_key: secretKey.encrypted_aes_key,
+      nonce: secretKey.nonce,
+      ephemeral_public_key: secretKey.ephemeral_public_key
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -261,7 +350,6 @@ router.post('/:id/decrypt', async (req, res) => {
       // Secret data
       encrypted_value: secret.encrypted_value,
       iv: secret.iv,
-      auth_tag: secret.auth_tag,
       name: secret.name,
       type: secret.type,
       
@@ -320,19 +408,16 @@ router.post("/:id/fetchEncrypted", async (req, res) => {
 
     // Return both the secret and the key info
     return res.json({
-      secret: {
-        id: secret.id,
-        name: secret.name,
-        encrypted_value: secret.encrypted_value,
-        iv: secret.iv,
-        auth_tag: secret.auth_tag,
-        type: secret.type,
-      },
-      aesKeyInfo: {
-        encrypted_aes_key: secretKey.encrypted_aes_key,
-        nonce: secretKey.nonce,
-        ephemeral_public_key: secretKey.ephemeral_public_key,
-      }
+      id: secret.id,
+      name: secret.name,
+      encrypted_value: secret.encrypted_value,
+      iv: secret.iv,
+      type: secret.type,
+      project_id: secret.project_id,
+      environment_id: secret.environment_id,
+      encrypted_aes_key: secretKey.encrypted_aes_key,
+      nonce: secretKey.nonce,
+      ephemeral_public_key: secretKey.ephemeral_public_key
     });
   } catch (error) {
     console.error('Error fetching encrypted data:', error);
@@ -389,7 +474,6 @@ router.post("/:id/diagnostic", async (req, res) => {
         hasEncryptedValue: !!secret.encrypted_value,
         encryptedValueLength: secret.encrypted_value?.length,
         ivLength: secret.iv?.length,
-        authTagLength: secret.auth_tag?.length,
         hasEncryptedAESKey: !!secretKey.encrypted_aes_key,
         encryptedAESKeyLength: secretKey.encrypted_aes_key?.length,
         hasNonce: !!secretKey.nonce,
@@ -442,7 +526,6 @@ router.post("/:id/diagnostic", async (req, res) => {
         encryptedValueLength: secret.encrypted_value?.length || 0,
         encryptedAESKeyLength: secretKey.encrypted_aes_key?.length || 0,
         ivLength: Buffer.from(secret.iv || "", "hex").length,
-        authTagLength: Buffer.from(secret.auth_tag || "", "hex").length,
         nonceLength: secretKey.nonce?.length || 0,
         ephemeralPublicKeyLength: secretKey.ephemeral_public_key?.length || 0,
       },

@@ -12,7 +12,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/hooks/use-toast"
 import { saveProject } from "@/lib/local-storage"
 import { useWallet } from "@solana/wallet-adapter-react"
-import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
 
 export function NewProjectForm() {
   const [projectName, setProjectName] = useState("")
@@ -50,6 +49,10 @@ export function NewProjectForm() {
         throw new Error('Please connect your wallet first');
       }
 
+      // if (!isInitialized) {
+      //   // Try to initialize encryption
+      //   await handleSignMessage();
+      // }
       // if (!isInitialized) {
       //   // Try to initialize encryption
       //   await handleSignMessage();
@@ -225,6 +228,7 @@ export function NewProjectForm() {
           >
             {isLoading ? "Creating Project..." : 
              !connected ? "Connect Wallet to Create" :
+            //  !isInitialized ? "Initialize Encryption" :
              "Create Project"}
           </Button>
         </CardFooter>

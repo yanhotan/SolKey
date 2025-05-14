@@ -345,39 +345,196 @@ export const api = {
   },
 };
 
-export async function decryptSecret(secretId: string) {
-  // 1. Get the encrypted data from server
-  const response = await fetch(`${API_BASE_URL}/api/secrets/${secretId}/decrypt`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      walletAddress: getWalletAddress(),
-      signature: await getSignature()
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch encrypted secret');
+export async function decryptSecret(
+  encryptedValue: string,
+  iv: string,
+  authTag: string
+): Promise<string> {
+  try {
+    console.log("🔑 Starting decryption with detailed debugging...");
+    
+    // Check for encryption key in localStorage
+    const encryptionKey = localStorage.getItem('solkey:encryption-key');
+    if (!encryptionKey) {
+      throw new Error("Encryption key not available. Please authenticate with your wallet first.");
+    }
+    
+    // Get the encryption key bytes from localStorage (base64 encoded)
+    const keyBytes = base64ToUint8Array(encryptionKey);
+    console.log("🔐 Encryption key details:", {
+      keyLength: keyBytes.length,
+      expectedLength: 32,
+      keyFirstBytes: Array.from(keyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
+    });
+    
+    if (keyBytes.length !== 32) {
+      console.warn(`⚠️ Unexpected key length: ${keyBytes.length} bytes, expected 32 bytes for AES-256`);
+    }
+    
+    // Create a CryptoKey from the raw bytes
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyBytes,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt']
+    );
+    
+    // Convert the IV from hex to bytes
+    const ivBytes = hexToUint8Array(iv);
+    console.log("🔍 IV details:", {
+      decodedByteLength: ivBytes.length,
+      expectedLength: 12,  // AES-GCM standard is 12 bytes
+      firstBytes: Array.from(ivBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(''),
+      originalHexLength: iv.length
+    });
+    
+    // IMPORTANT: The backend already combines ciphertext + authTag before base64 encoding
+    // So we just need to decode the base64 string directly
+    const encryptedBytes = base64ToUint8Array(encryptedValue);
+    
+    console.log("📦 Data prepared for decryption:", {
+      encryptedBytesLength: encryptedBytes.length,
+      ivBytesLength: ivBytes.length
+    });
+    
+    // Additional diagnostic info for AES-GCM structure
+    if (encryptedBytes.length > 16) {
+      console.log("🔍 AES-GCM structure diagnostic:", {
+        totalLength: encryptedBytes.length,
+        expectedCiphertextLength: encryptedBytes.length - 16, // Assuming 16-byte auth tag
+        expectedAuthTagLength: 16,
+        actualEnding: Array.from(encryptedBytes.slice(-16)).map(b => b.toString(16).padStart(2, '0')).join(''),
+        actualBeginning: Array.from(encryptedBytes.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join('')
+      });
+      
+      // Compare with provided authTag if available
+      if (authTag && authTag.length > 0) {
+        const authTagBytes = hexToUint8Array(authTag);
+        const expectedTag = Array.from(authTagBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        const actualTag = Array.from(encryptedBytes.slice(-16)).map(b => b.toString(16).padStart(2, '0')).join('');
+        console.log("🔍 Auth tag comparison:", {
+          providedTagLength: authTagBytes.length,
+          providedTagHex: expectedTag,
+          extractedTagHex: actualTag,
+          tagsMatch: expectedTag === actualTag
+        });
+      }
+    }
+    
+    // Attempt decryption
+    try {
+      console.log("🔓 Decryption attempt #1: Using direct encrypted data with WebCrypto");
+      
+      const decryptedBuffer = await crypto.subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: ivBytes
+          // Note: No tagLength parameter - WebCrypto assumes the tag is appended to ciphertext
+        },
+        key,
+        encryptedBytes
+      );
+      
+      const decryptedText = new TextDecoder().decode(decryptedBuffer);
+      console.log("✅ Primary decryption successful!");
+      return decryptedText;
+    } catch (primaryError) {
+      console.error("❌ Primary decryption failed:", primaryError);
+      
+      // Try fallback approach: separate ciphertext and auth tag
+      console.log("🔍 Attempting fallback decryption approach #1: Separating ciphertext and auth tag");
+      try {
+        // The auth tag is the last 16 bytes of the encrypted data
+        const tagLength = 16; // GCM auth tag is always 16 bytes
+        
+        // Extract the tag from the end of the encrypted data
+        const ciphertextLength = encryptedBytes.length - tagLength;
+        const ciphertext = encryptedBytes.slice(0, ciphertextLength);
+        const extractedTag = encryptedBytes.slice(ciphertextLength);
+        
+        console.log("🔍 Split data details:", {
+          ciphertextLength: ciphertext.length,
+          extractedTagLength: extractedTag.length,
+          extractedTagFirstBytes: Array.from(extractedTag.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(''),
+          totalLength: encryptedBytes.length
+        });
+        
+        // Create a combined array for WebCrypto
+        const combinedBuffer = new Uint8Array(ciphertext.length + extractedTag.length);
+        combinedBuffer.set(ciphertext, 0);
+        combinedBuffer.set(extractedTag, ciphertext.length);
+        
+        // Attempt decryption with the re-combined data
+        const decryptedBuffer = await crypto.subtle.decrypt(
+          {
+            name: 'AES-GCM',
+            iv: ivBytes
+          },
+          key,
+          combinedBuffer
+        );
+        
+        const decryptedText = new TextDecoder().decode(decryptedBuffer);
+        console.log("✅ Fallback decryption successful!");
+        return decryptedText;
+      } catch (fallbackError) {
+        console.error("❌ Fallback approach #1 failed:", fallbackError);
+        
+        // Try fallback approach 2: Using explicit auth tag from params
+        if (authTag && authTag.length > 0) {
+          console.log("🔍 Attempting fallback decryption approach #2: Using provided auth tag");
+          try {
+            // Convert auth tag from hex to bytes
+            const authTagBytes = hexToUint8Array(authTag);
+            console.log("🔐 Auth tag details:", {
+              decodedByteLength: authTagBytes.length,
+              expectedLength: 16, // GCM auth tag is always 16 bytes
+              firstBytes: Array.from(authTagBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
+            });
+            
+            // Extract just the ciphertext from base64 (assuming backend combined them)
+            // The encrypted data contains both ciphertext and auth tag
+            // We need to separate them
+            const ciphertextOnly = base64ToUint8Array(encryptedValue);
+            let actualCiphertext = ciphertextOnly;
+            
+            // If the backend included the auth tag at the end of the encrypted value,
+            // we need to remove it to avoid duplicating it
+            if (ciphertextOnly.length >= 16) {
+              actualCiphertext = ciphertextOnly.slice(0, ciphertextOnly.length - 16);
+            }
+            
+            // Create a combined array for WebCrypto
+            const finalCombinedBuffer = new Uint8Array(actualCiphertext.length + authTagBytes.length);
+            finalCombinedBuffer.set(actualCiphertext, 0);
+            finalCombinedBuffer.set(authTagBytes, actualCiphertext.length);
+            
+            const decryptedBuffer = await crypto.subtle.decrypt(
+              {
+                name: 'AES-GCM',
+                iv: ivBytes
+              },
+              key,
+              finalCombinedBuffer
+            );
+            
+            const decryptedText = new TextDecoder().decode(decryptedBuffer);
+            console.log("✅ Fallback approach #2 successful!");
+            return decryptedText;
+          } catch (finalError) {
+            console.error("❌ All decryption approaches failed:", finalError);
+            throw new Error("Decryption failed with all approaches. Please ensure the encryption key and encrypted data are correct.");
+          }
+        }
+        
+        throw new Error(`Decryption failed. Details: ${primaryError instanceof Error ? primaryError.message : String(primaryError)}`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error in decryptSecret:', error);
+    throw new Error(`Decryption failed: ${error instanceof Error ? error.message : String(error)}`);
   }
-
-  const encryptedData = await response.json();
-
-  // 2. Use wallet to decrypt (implement this based on your wallet library)
-  const privateKey = await getWalletPrivateKey(); // Your wallet access method
-  const aesKey = decryptAesKeyWithPrivateKey(
-    encryptedData.encryptedAesKey,
-    encryptedData.nonce,
-    encryptedData.ephemeralPublicKey,
-    privateKey
-  );
-
-  // 3. Use decrypted AES key to decrypt the secret value
-  const secretValue = decryptWithAesKey(
-    encryptedData.encryptedValue, 
-    aesKey
-  );
-
-  return secretValue;
 }
 
 // Utility function to get the wallet address
@@ -425,9 +582,6 @@ function decryptWithAesKey(encryptedValue: string, aesKey: string): string {
   return "example-decrypted-value"; // Example decrypted value
 }
 
-// Import the improved decryption method
-import { decryptSecret as decryptSecretFromLib } from "@/lib/secret-decryptor";
-
 // Update the decrypt method
 export async function decryptSecretWithWallet(
   encryptedValue: string,
@@ -441,8 +595,8 @@ export async function decryptSecretWithWallet(
       authTagLength: authTag?.length || 0
     });
     
-    // Use the improved decryptSecret function from secret-decryptor.ts
-    return await decryptSecretFromLib(encryptedValue, iv, authTag);
+    // Use our own decryptSecret function directly
+    return await decryptSecret(encryptedValue, iv, authTag);
   } catch (error) {
     console.error('Error in decryptSecretWithWallet:', error);
     throw error instanceof Error ? error : new Error(String(error));
@@ -451,17 +605,76 @@ export async function decryptSecretWithWallet(
 
 // Helper function for base64 to Uint8Array conversion
 function base64ToUint8Array(base64: string): Uint8Array {
+  if (!base64 || typeof base64 !== 'string') {
+    console.error('❌ Invalid base64 string provided:', base64);
+    return new Uint8Array(0);
+  }
+  
+  // Remove any padding if present and log
+  let cleanBase64 = base64;
+  const originalLength = cleanBase64.length;
+  
+  // Handle common issues with base64 strings
+  
+  // 1. Remove any whitespace
+  cleanBase64 = cleanBase64.replace(/\s/g, '');
+  
+  // 2. Fix incorrect padding (must be 0, 1 or 2 '=' at the end)
+  const paddingMatch = cleanBase64.match(/=+$/);
+  if (paddingMatch && paddingMatch[0].length > 2) {
+    cleanBase64 = cleanBase64.replace(/=+$/, '');
+    console.warn(`⚠️ Removed excessive base64 padding, had ${paddingMatch[0].length} '=' chars`);
+  }
+  
+  // 3. Ensure correct padding
+  const requiredPadding = (4 - (cleanBase64.length % 4)) % 4;
+  if (requiredPadding > 0 && !cleanBase64.endsWith('=')) {
+    const oldBase64 = cleanBase64;
+    cleanBase64 = cleanBase64 + '='.repeat(requiredPadding);
+    console.warn(`⚠️ Added ${requiredPadding} missing padding character(s) to base64 string: ${oldBase64} -> ${cleanBase64}`);
+  }
+  
+  // If we made any changes, log them
+  if (cleanBase64 !== base64) {
+    console.warn(`⚠️ Base64 string was modified for compatibility: Original length ${originalLength} -> New length ${cleanBase64.length}`);
+  }
+  
   try {
     // For compatibility with all browsers
-    const binaryString = atob(base64);
+    const binaryString = atob(cleanBase64);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
+    
+    console.log(`✅ Successfully converted base64 string (length ${originalLength}) to Uint8Array (length ${bytes.length})`);
+    
     return bytes;
   } catch (error) {
-    console.error("Base64 conversion error:", error);
-    throw new Error("Failed to convert base64 data");
+    console.error("❌ Base64 conversion error:", error);
+    
+    // Try an alternative approach if the first one fails
+    try {
+      console.log("🔍 Attempting alternative base64 conversion method...");
+      
+      // Remove any non-base64 characters and try again
+      const strictBase64 = cleanBase64.replace(/[^A-Za-z0-9+/=]/g, '');
+      if (strictBase64 !== cleanBase64) {
+        console.warn(`⚠️ Removed invalid base64 characters: ${cleanBase64} -> ${strictBase64}`);
+      }
+      
+      const binaryString = atob(strictBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      console.log(`✅ Alternative base64 conversion succeeded, output length: ${bytes.length}`);
+      return bytes;
+    } catch (fallbackError) {
+      console.error("❌ All base64 conversion attempts failed:", fallbackError);
+      throw new Error("Failed to convert base64 data: " + (error instanceof Error ? error.message : String(error)));
+    }
   }
 }
 
@@ -469,29 +682,49 @@ function base64ToUint8Array(base64: string): Uint8Array {
 function hexToUint8Array(hex: string): Uint8Array {
   // Ensure the hex string is valid
   if (!hex || typeof hex !== 'string') {
-    console.error('Invalid hex string provided:', hex);
+    console.error('❌ Invalid hex string provided:', hex);
     return new Uint8Array(0);
   }
 
   // Remove any non-hex characters (like 0x prefix or spaces)
   const cleanHex = hex.replace(/[^0-9a-fA-F]/g, '');
   
-  // Ensure we have an even number of characters (each byte is 2 hex chars)
-  if (cleanHex.length % 2 !== 0) {
-    console.warn('Hex string has odd length, padding with 0:', cleanHex);
+  // Log if we had to clean the input
+  if (cleanHex !== hex) {
+    console.warn(`⚠️ Cleaned non-hex characters from input: "${hex}" -> "${cleanHex}"`);
   }
   
-  // Add a leading zero if needed to ensure even length
-  const paddedHex = cleanHex.length % 2 !== 0 ? '0' + cleanHex : cleanHex;
+  // Ensure we have an even number of characters (each byte is 2 hex chars)
+  let paddedHex = cleanHex;
+  if (cleanHex.length % 2 !== 0) {
+    paddedHex = '0' + cleanHex;
+    console.warn(`⚠️ Hex string had odd length, padded with leading zero: ${cleanHex} -> ${paddedHex}`);
+  }
   
   // Convert the hex string to bytes
   const bytes = new Uint8Array(paddedHex.length / 2);
+  
+  try {
   for (let i = 0; i < paddedHex.length; i += 2) {
-    bytes[i / 2] = parseInt(paddedHex.substring(i, i + 2), 16);
+      const byteValue = parseInt(paddedHex.substring(i, i + 2), 16);
+      if (isNaN(byteValue)) {
+        throw new Error(`Invalid hex characters at position ${i}: ${paddedHex.substring(i, i + 2)}`);
+      }
+      bytes[i / 2] = byteValue;
+    }
+  } catch (error) {
+    console.error('❌ Error converting hex to bytes:', error);
+    return new Uint8Array(0);
   }
   
-  // Log the conversion result for debugging
-  console.log(`Converted hex string (length ${hex.length}) to Uint8Array (length ${bytes.length})`);
+  console.log(`✅ Converted hex string (length ${hex.length}) to Uint8Array (length ${bytes.length})`);
+  
+  // Verify that we have the expected length for common use cases
+  if (hex.length === 24 && bytes.length !== 12) {
+    console.warn(`⚠️ Unexpected conversion result: Hex length ${hex.length} should normally give byte length 12, got ${bytes.length}`);
+  } else if (hex.length === 32 && bytes.length !== 16) {
+    console.warn(`⚠️ Unexpected conversion result: Hex length ${hex.length} should normally give byte length 16, got ${bytes.length}`);
+  }
   
   return bytes;
 }

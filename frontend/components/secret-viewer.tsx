@@ -146,8 +146,7 @@ export default function SecretViewer({
         return;
       }
       
-      // For now, we'll just show that encrypted data is available but not fetch it yet
-      // We'll do the actual fetch with the Fetch Encrypted Data button
+
       setHasAccess(true);
     } catch (err) {
       console.error("Fetching encrypted data without signature failed:", err);
