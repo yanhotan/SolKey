@@ -12,6 +12,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/hooks/use-toast"
 import { saveProject } from "@/lib/local-storage"
 import { useWallet } from "@solana/wallet-adapter-react"
+// import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
+// import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
+// import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
 
 export function NewProjectForm() {
   const [projectName, setProjectName] = useState("")
@@ -26,7 +29,6 @@ export function NewProjectForm() {
   const { connected } = useWallet()
   // const { isInitialized, handleSignMessage } = useWalletEncryption()
 
-  // Automatically initialize encryption when wallet is connected
   // useEffect(() => {
   //   if (connected && !isInitialized && !isLoading) {
   //     handleSignMessage().catch((err: unknown) => {
@@ -224,10 +226,11 @@ export function NewProjectForm() {
           </Button>
           <Button 
             type="submit" 
-            disabled={isLoading || !projectName.trim() || !connected }
-          >
+            disabled={isLoading || !projectName.trim() || !connected }          >
             {isLoading ? "Creating Project..." : 
              !connected ? "Connect Wallet to Create" :
+            //  !isInitialized ? "Initialize Encryption" :
+            //  !isInitialized ? "Initialize Encryption" :
             //  !isInitialized ? "Initialize Encryption" :
              "Create Project"}
           </Button>
