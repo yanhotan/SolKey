@@ -3,6 +3,7 @@ import { ProjectDetail } from "@/components/project-detail"
 import { ProjectTabs } from "@/components/project-tabs"
 import { ProjectHeader } from "@/components/project-header"
 import { useEffect, useState } from "react"
+import { ProjectsList } from "@/components/projects-list"
 export default function ProjectPage({ params }: { params: { id: string } }) {
 
   type Projects = {
@@ -42,7 +43,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     }[]
   };
 
-  const [projects, setProjects] = useState<Projects[]>([]);
+  const [projects, setProjects] = useState<Projects | null>(null);
   
    useEffect(() => {
       async function fetchProjects() {
@@ -59,7 +60,10 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   
       fetchProjects();
     }, []);
-  
+
+     if (!projects) {
+    return <p>Loading project...</p>
+  }
 
   return (
     <div className="space-y-6">

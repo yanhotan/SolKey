@@ -56,10 +56,10 @@ export function NewProjectForm() {
       }
 
       // Get the encryption key
-      const encryptionKey = localStorage.getItem('solkey_encryption_key');
-      if (!encryptionKey) {
-        throw new Error('Failed to generate encryption key. Please try again.');
-      }
+      // const encryptionKey = localStorage.getItem('solkey_encryption_key');
+      // if (!encryptionKey) {
+      //   throw new Error('Failed to generate encryption key. Please try again.');
+      // }
 
       // Generate project ID and data
       const projectSlug = projectName
@@ -82,7 +82,7 @@ export function NewProjectForm() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         status: 'active' as const,
-        encryptionKey: encryptionKey // Store encryption key with project
+        // encryptionKey: encryptionKey // Store encryption key with project
       };
 
       // Save to localStorage
@@ -91,13 +91,38 @@ export function NewProjectForm() {
         throw new Error('Failed to save project');
       }
 
+      
+    const response = await fetch("http://localhost:3002/api/projects", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: projectName.trim(),
+        description: projectDescription.trim(),
+        environments: selectedEnvironments,
+        creatorId:"2d48f326-c9fd-47d8-85f6-0b21e5af3992",
+      }),
+    });
+
+    if (!response.ok) {
+      const { error } = await response.json();
+      throw new Error(error || "Failed to create project");
+    }
+
+    const project = await response.json();
+    toast({
+      title: "Project created",
+      description: `${project.name} has been created successfully.`,
+    });
+    
       toast({
         title: "Project created",
         description: `${projectName} has been created successfully.`,
       });
 
       // Navigate to the new project
-      router.push(`/dashboard/projects/${projectId}`);
+      router.push(`/dashboard/projects/${project.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
       toast({

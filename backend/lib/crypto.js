@@ -195,6 +195,11 @@ async function createSecret(
 
     // Encrypt AES key for each member
     for (const member of members) {
+      if (!member.wallet_address) {
+        console.log("Skipping member with null wallet_address");
+        continue;
+      }
+
       console.log(`Encrypting for member: ${member.wallet_address}`);
       const { encryptedAESKey, nonce, ephemeralPublicKey } =
         encryptAESKeyForUser(secretKey, member.wallet_address);
