@@ -75,10 +75,18 @@ function encryptWithAES(data, key) {
 
   const authTag = cipher.getAuthTag();
 
+  // For WebCrypto compatibility - combine ciphertext and authTag before base64 encoding
+  // WebCrypto expects the authTag to be appended to the ciphertext
+  const encryptedBytes = Buffer.concat([
+    Buffer.from(encrypted, 'base64'), 
+    authTag
+  ]);
+  const combinedEncrypted = encryptedBytes.toString('base64');
+
   return {
-    encrypted,
+    encrypted: combinedEncrypted, // Combined ciphertext + authTag
     iv: iv.toString("hex"),
-    authTag: authTag.toString("hex"),
+    authTag: authTag.toString("hex"), // Keep for backward compatibility
   };
 }
 

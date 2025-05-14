@@ -238,7 +238,48 @@ export default function SecretViewer({
         }
       }
       
-      // Now decrypt the data - this requires another signature
+      // Check if encryption key exists in localStorage
+      const hasEncryptionKey = !!localStorage.getItem('solkey:encryption-key');
+      if (!hasEncryptionKey) {
+        console.log("Encryption key not found, initializing wallet encryption key before decryption");
+        try {
+          // First sign a message to derive the encryption key
+          const { SIGNATURE_MESSAGE } = await import("@/lib/wallet-auth");
+          const messageBytes = new TextEncoder().encode(SIGNATURE_MESSAGE);
+          
+          // Sign the message with wallet
+          console.log("Signing message to derive encryption key");
+          const keySignature = await signMessage(messageBytes);
+          console.log("Message signed successfully for key derivation");
+          
+          // Import necessary functions
+          const { deriveEncryptionKey } = await import("@/lib/wallet-auth");
+          const bs58 = await import('bs58');
+          
+          // Derive and store the encryption key locally
+          await deriveEncryptionKey(
+            SIGNATURE_MESSAGE,
+            bs58.default.encode(keySignature)
+          );
+          
+          console.log("Encryption key derived and stored successfully");
+          
+          // Verify the key was stored
+          if (!localStorage.getItem('solkey:encryption-key')) {
+            throw new Error("Encryption key was not properly stored after signing");
+          }
+        } catch (keyError) {
+          console.error("Failed to derive encryption key:", keyError);
+          setError("Failed to set up encryption: " + 
+            (keyError instanceof Error ? keyError.message : String(keyError)));
+          setSignatureInProgress(false);
+          return;
+        }
+      } else {
+        console.log("Using existing encryption key from localStorage");
+      }
+      
+      // Now sign message for auth
       const message = new TextEncoder().encode("auth-to-decrypt");
       let signature;
       try {

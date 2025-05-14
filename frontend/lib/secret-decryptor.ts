@@ -4,16 +4,12 @@
  * 
  * Key format differences between Node.js and WebCrypto:
  * 1. Node.js crypto (backend):
- *    - Uses separate authTag via getAuthTag()
+ *    - Now combines ciphertext and authTag before base64 encoding
  *    - Stores IV as hex string
- *    - Stores authTag as hex string
- *    - Stores encrypted data as base64 string
+ *    - Still provides authTag as hex string for backward compatibility
  * 
  * 2. WebCrypto API (frontend):
- *    - Requires authTag to be appended to ciphertext
  *    - Expects binary data (Uint8Array) for all inputs
- * 
- * This module handles these differences automatically.
  */
 
 /**
@@ -56,9 +52,9 @@ function base64ToUint8Array(base64: string): Uint8Array {
 /**
  * Decrypt a secret value using the wallet-derived encryption key
  * 
- * @param encryptedValue - Base64 encoded encrypted value from backend
+ * @param encryptedValue - Base64 encoded encrypted value from backend (now includes authTag)
  * @param iv - Hex string IV from backend
- * @param authTag - Hex string authentication tag from backend
+ * @param authTag - Hex string authentication tag from backend (may not be needed with new format)
  * @returns The decrypted plaintext
  */
 export async function decryptSecret(
@@ -88,11 +84,6 @@ export async function decryptSecret(
     const keyBytes = base64ToUint8Array(encryptionKey);
     console.log("Encryption key bytes length:", keyBytes.length);
     
-    // Validate key length
-    if (keyBytes.length !== 32) {
-      console.warn("Unexpected encryption key length:", keyBytes.length, "expected 32 bytes");
-    }
-    
     // Create a CryptoKey from the raw bytes
     const key = await crypto.subtle.importKey(
       'raw',
@@ -109,15 +100,10 @@ export async function decryptSecret(
       throw new Error("Invalid IV format or length");
     }
     
-    // Convert hex auth tag to binary
-    const authTagBytes = hexToUint8Array(authTag);
-    if (authTagBytes.length === 0) {
-      throw new Error("Invalid auth tag");
-    }
-    
     // Convert base64 encrypted data to binary
     let encryptedBytes: Uint8Array;
     try {
+      // The encrypted value now already contains the authentication tag appended
       encryptedBytes = base64ToUint8Array(encryptedValue);
       if (encryptedBytes.length === 0) {
         throw new Error("Empty encrypted data");
@@ -129,171 +115,57 @@ export async function decryptSecret(
     
     console.log("Data prepared for decryption:", {
       ivBytesLength: ivBytes.length,
-      authTagBytesLength: authTagBytes.length,
-      encryptedBytesLength: encryptedBytes.length,
-      // More detailed format information
-      ivFormat: "hex → binary",
-      authTagFormat: "hex → binary",
-      encryptedFormat: "base64 → binary"
+      encryptedBytesLength: encryptedBytes.length
     });
     
-    // For AES-GCM, WebCrypto API expects the authentication tag to be appended to the ciphertext
-    // Node.js crypto returns them separately, so we need to combine them
-    const combinedData = new Uint8Array(encryptedBytes.length + authTagBytes.length);
-    combinedData.set(encryptedBytes);
-    combinedData.set(authTagBytes, encryptedBytes.length);
-    
-    console.log("Data format for decryption:", {
-      combinedDataLength: combinedData.length,
-      encryptedBytesLength: encryptedBytes.length,
-      authTagBytesLength: authTagBytes.length,
-      ivBytesLength: ivBytes.length,
-      // Show the first few bytes for debugging
-      ivSample: Array.from(ivBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(''),
-      encryptedSample: Array.from(encryptedBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(''),
-      authTagSample: Array.from(authTagBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
-    });
-    
-    // Examine lengths for debugging
-    console.log("Examining binary data lengths for format detection:", {
-      ivLength: ivBytes.length,           // Should be 16 bytes
-      authTagLength: authTagBytes.length, // Usually 16 bytes for AES-GCM
-      encryptedLength: encryptedBytes.length
-    });
-    
-    // Log explicit algorithm parameters
-    console.log("Using AES-GCM with parameters:", {
-      keyLength: 256, // bits
-      tagLength: 128, // bits (16 bytes)
-      ivLength: 16    // bytes
-    });
-    
-    // Try multiple approaches - the backend implementation details make 
-    // multiple approaches necessary
-    console.log("Attempting decryption with different approaches...");
-    
-    // First, try some format checking
-    if (encryptedBytes.length % 4 !== 0 || authTagBytes.length !== 16) {
-      console.warn("Unusual encrypted data or tag format detected:", {
-        encryptedBytesLengthMod4: encryptedBytes.length % 4,
-        authTagBytesLength: authTagBytes.length
-      });
-    }
-
-    // After inspecting the backend code in crypto.js, we've confirmed:
-    // 1. The backend uses crypto.createCipheriv("aes-256-gcm", key, iv)
-    // 2. It stores encrypted data in base64, IV and authTag in hex
-    // 3. It keeps authTag separate via cipher.getAuthTag()
-    
-    // Try multiple decryption approaches to handle different format possibilities
+    // Attempt decryption with WebCrypto (the encrypted data already includes the auth tag)
     try {
-      // Approach 1: Standard WebCrypto approach (tag appended to ciphertext)
-      console.log("Approach 1: Standard WebCrypto approach - auth tag appended to ciphertext");
-      const combinedData1 = new Uint8Array(encryptedBytes.length + authTagBytes.length);
-      combinedData1.set(encryptedBytes);
-      combinedData1.set(authTagBytes, encryptedBytes.length);
-      
       const decrypted = await crypto.subtle.decrypt(
         {
           name: 'AES-GCM',
-          iv: ivBytes,
-          tagLength: 128 // 16 bytes * 8 = 128 bits
+          iv: ivBytes
         },
         key,
-        combinedData1
+        encryptedBytes
       );
       
       // Convert decrypted ArrayBuffer to string
       const decryptedText = new TextDecoder().decode(decrypted);
-      console.log("Decryption successful (approach 1), text length:", decryptedText.length);
+      console.log("Decryption successful, text length:", decryptedText.length);
       return decryptedText;
-    } catch (error1) {
-      console.warn("Approach 1 failed:", error1);
+    } catch (error) {
+      console.error("Decryption failed:", error);
       
-      // Approach 2: Try with tag prepended (some implementations do this)
+      // Fallback for backward compatibility with older data format
+      console.log("Attempting fallback decryption approach...");
+      
+      // Try with the separate auth tag for older data
       try {
-        console.log("Approach 2: Auth tag prepended to ciphertext");
-        const combinedData2 = new Uint8Array(encryptedBytes.length + authTagBytes.length);
-        combinedData2.set(authTagBytes);
-        combinedData2.set(encryptedBytes, authTagBytes.length);
+        const authTagBytes = hexToUint8Array(authTag);
+        if (authTagBytes.length === 0) {
+          throw new Error("Invalid auth tag for fallback");
+        }
+        
+        // This is the old way, combining them manually
+        const combinedData = new Uint8Array(encryptedBytes.length + authTagBytes.length);
+        combinedData.set(encryptedBytes);
+        combinedData.set(authTagBytes, encryptedBytes.length);
         
         const decrypted = await crypto.subtle.decrypt(
           {
             name: 'AES-GCM',
-            iv: ivBytes,
-            tagLength: 128
+            iv: ivBytes
           },
           key,
-          combinedData2
+          combinedData
         );
         
         const decryptedText = new TextDecoder().decode(decrypted);
-        console.log("Decryption successful (approach 2), text length:", decryptedText.length);
+        console.log("Fallback decryption successful, text length:", decryptedText.length);
         return decryptedText;
-      } catch (error2) {
-        console.warn("Approach 2 failed:", error2);
-        
-        // Approach 3: Try direct decryption (in case tag is already embedded)
-        try {
-          console.log("Approach 3: Attempting with encrypted data only (tag may be included)");
-          const decrypted = await crypto.subtle.decrypt(
-            {
-              name: 'AES-GCM',
-              iv: ivBytes,
-              tagLength: 128
-            },
-            key,
-            encryptedBytes
-          );
-          
-          const decryptedText = new TextDecoder().decode(decrypted);
-          console.log("Decryption successful (approach 3), text length:", decryptedText.length);
-          return decryptedText;
-        } catch (error3) {
-          console.warn("Approach 3 failed:", error3);
-          
-          // Approach 4: Try with a manual AES-GCM implementation using a different tag position
-          try {
-            console.log("Approach 4: Last attempt with alternate tag handling");
-            
-            // Try with tag in a different position or format
-            if (encryptedBytes.length >= 16) {
-              console.log("Attempting to extract tag from encrypted data...");
-              
-              // Try extracting the tag from the end
-              const potentialCiphertext = encryptedBytes.slice(0, encryptedBytes.length - 16);
-              const potentialTag = encryptedBytes.slice(encryptedBytes.length - 16);
-              
-              const combinedData4 = new Uint8Array(potentialCiphertext.length + authTagBytes.length);
-              combinedData4.set(potentialCiphertext);
-              combinedData4.set(authTagBytes, potentialCiphertext.length);
-              
-              const decrypted = await crypto.subtle.decrypt(
-                {
-                  name: 'AES-GCM',
-                  iv: ivBytes,
-                  tagLength: 128
-                },
-                key,
-                combinedData4
-              );
-              
-              const decryptedText = new TextDecoder().decode(decrypted);
-              console.log("Decryption successful (approach 4), text length:", decryptedText.length);
-              return decryptedText;
-            } else {
-              throw new Error("Encrypted data too short for approach 4");
-            }
-          } catch (error4) {
-            console.error("All decryption approaches failed:", {
-              error1: error1?.message || error1,
-              error2: error2?.message || error2,
-              error3: error3?.message || error3,
-              error4: error4?.message || error4
-            });
-            throw new Error("Decryption failed after trying multiple approaches");
-          }
-        }
+      } catch (fallbackError) {
+        console.error("Fallback decryption also failed:", fallbackError);
+        throw new Error("Failed to decrypt data. Format may be incompatible.");
       }
     }
   } catch (error) {

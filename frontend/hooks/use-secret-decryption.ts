@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { api, decryptSecretWithWallet } from '@/lib/api';
 import { useWalletEncryption } from './use-wallet-encryption';
+import { deriveEncryptionKey } from '@/lib/wallet-auth';
 
 interface SecretData {
   id: string;
@@ -38,7 +39,18 @@ export function useSecretDecryption() {
       // Create a message to sign for authentication
       const message = new TextEncoder().encode('auth-to-decrypt');
       const signature = await signMessage(message);
-      return Buffer.from(signature).toString('base64');
+      const signatureBase64 = Buffer.from(signature).toString('base64');
+      
+      // THIS IS THE CRITICAL ADDITION - derive and store the encryption key
+      try {
+        await deriveEncryptionKey('auth-to-decrypt', signatureBase64);
+        console.log("Encryption key derived successfully from signature");
+      } catch (derivationError) {
+        console.error("Failed to derive encryption key:", derivationError);
+        // Still proceed with API call as this might be a different issue
+      }
+      
+      return signatureBase64;
     } catch (error) {
       if (error instanceof Error && error.message.includes('User rejected')) {
         throw new Error('Message signing was cancelled by user');
@@ -164,4 +176,4 @@ export function useSecretDecryption() {
     loading,
     errors
   };
-} 
+}

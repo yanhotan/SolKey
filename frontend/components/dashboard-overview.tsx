@@ -3,12 +3,23 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FolderKanban, Users, Key, GitBranch, LoaderCircle, CheckCircle2, XCircle } from "lucide-react";
+import { 
+  FolderKanban, 
+  Users, 
+  Key, 
+  GitBranch, 
+  Loader, 
+  CheckCircle2, 
+  XCircle, 
+  RefreshCcw, 
+  LoaderCircle,
+  AlertCircle 
+} from "lucide-react";
 import SecretViewer from "./secret-viewer";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { api } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { useWalletEncryption } from "@/hooks/use-wallet-encryption";
 
 interface Secret {
   id: string;
@@ -33,6 +44,7 @@ export function DashboardOverview() {
   const [error, setError] = useState<string | null>(null);
   const [verificationData, setVerificationData] = useState<Record<string, VerificationData>>({});
   const { publicKey, connected, signMessage } = useWallet();
+  const { isInitialized, handleSignMessage } = useWalletEncryption();
 
   const stats = [
     {
@@ -154,7 +166,9 @@ export function DashboardOverview() {
         console.error("Error in auto-fetch sequence:", err);
       });
     }
-  }, [secrets, connected, publicKey, verificationData]);
+  // Remove verificationData from deps to prevent excessive rerendering
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secrets, connected, publicKey]);
 
   // Handle decryption
   const handleDecrypt = async (secretId: string) => {
@@ -170,31 +184,87 @@ export function DashboardOverview() {
     }));
 
     try {
-      // Sign message for auth
+      console.log("===== DECRYPTION PROCESS STARTED =====");
+      
+      // First ensure encryption key is initialized by signing message if needed
+      if (!isInitialized || !localStorage.getItem('solkey:encryption-key')) {
+        console.log("Encryption key not found, initializing wallet encryption key before decryption");
+        try {
+          await handleSignMessage();
+          console.log("Encryption key initialization complete, encryption key in localStorage:", 
+            !!localStorage.getItem('solkey:encryption-key'));
+          // Verify a proper key was stored
+          if (!localStorage.getItem('solkey:encryption-key')) {
+            throw new Error("Encryption key was not properly stored after signing.");
+          }
+        } catch (signErr) {
+          console.error("Failed to initialize encryption key:", signErr);
+          throw new Error("Please sign the message with your wallet to decrypt");
+        }
+      } else {
+        console.log("Using existing encryption key from localStorage");
+      }
+
+      // Now sign message for auth
       const message = new TextEncoder().encode("auth-to-decrypt");
       const signature = await signMessage(message);
       const signatureBase64 = Buffer.from(signature).toString("base64");
 
+      console.log(`Sending decrypt request for secret ${secretId}`);
       const decryptedResult = await api.secrets.decrypt(secretId, {
         walletAddress: publicKey.toBase58(),
         signature: signatureBase64
       });
 
+      console.log("Decryption successful!");
+      // Display success message and update state
+      console.log("Decryption successful, updating UI with result:", {
+        secretId,
+        hasResult: !!decryptedResult,
+        hasValue: !!decryptedResult?.value,
+        valueLength: decryptedResult?.value?.length,
+        secretType: decryptedResult?.type
+      });
+      
+      // Log successful decryption details
+      console.log("Decryption completed successfully:", {
+        secretId,
+        name: decryptedResult.name,
+        type: decryptedResult.type,
+        valueLength: decryptedResult.value?.length || 0
+      });
+      
       setVerificationData(prev => ({
         ...prev,
         [secretId]: {
           ...prev[secretId],
           decryptedData: decryptedResult,
+          decryptedError: null,
           isDecryptedLoading: false
         }
       }));
     } catch (decryptErr) {
+      // Improved error handling with more context
       console.error(`Failed to decrypt secret ${secretId}:`, decryptErr);
+      
+      // Check if we have specific error types we should handle specially
+      let errorMessage = "Failed to decrypt secret";
+      
+      if (decryptErr instanceof Error) {
+        errorMessage = decryptErr.message;
+        
+        if (errorMessage.includes("key")) {
+          errorMessage = "Encryption key issue: " + errorMessage;
+        } else if (errorMessage.includes("decrypt")) {
+          errorMessage = "Decryption failed: " + errorMessage;
+        }
+      }
+      
       setVerificationData(prev => ({
         ...prev,
         [secretId]: {
           ...prev[secretId],
-          decryptedError: decryptErr instanceof Error ? decryptErr.message : "Failed to decrypt secret",
+          decryptedError: errorMessage,
           isDecryptedLoading: false
         }
       }));
@@ -212,6 +282,11 @@ export function DashboardOverview() {
       });
 
       console.log(`Fetched encrypted data for secret ${secretId}:`, encryptedResult);
+      
+      // Add more detailed logging for automatic fetching
+      const source = new Error().stack?.includes('fetchSequentially') ? 'auto' : 'manual';
+      console.log(`Data fetch completed (${source}) for secret ${secretId}`);
+      
       return {
         data: encryptedResult,
         error: null
@@ -256,8 +331,16 @@ export function DashboardOverview() {
     const data = verificationData[secret.id];
     if (!data) return null;
     
+    // Check if we need to show encryption key initialization status
+    const needsEncryptionKey = !localStorage.getItem('solkey:encryption-key');
+    
     return (
       <Card key={secret.id} className="col-span-full mt-4">
+        {needsEncryptionKey && (
+          <div className="bg-amber-50 border-amber-200 border px-4 py-2 text-amber-800 text-sm">
+            <span className="font-semibold">Wallet encryption key required:</span> Please click "Sign & Decrypt" to initialize the encryption key before decrypting your data.
+          </div>
+        )}
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Secret Verification: {secret.name}</CardTitle>
@@ -288,8 +371,17 @@ export function DashboardOverview() {
                 onClick={() => handleFetchEncrypted(secret.id)}
                 className="ml-4"
               >
-                <LoaderCircle className={`h-4 w-4 mr-2 ${data.isEncryptedLoading ? 'animate-spin' : ''}`} />
-                Fetch Encrypted
+                {data.encryptedData ? (
+                  <>
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Refresh Data
+                  </>
+                ) : (
+                  <>
+                    <LoaderCircle className={`h-4 w-4 mr-2 ${data.isEncryptedLoading ? 'animate-spin' : ''}`} />
+                    {data.isEncryptedLoading ? 'Loading...' : 'Fetch Encrypted'}
+                  </>
+                )}
               </Button>
               <Button 
                 variant="outline"
@@ -298,7 +390,7 @@ export function DashboardOverview() {
                 className="ml-4"
               >
                 <Key className="h-4 w-4 mr-2" />
-                Decrypt Data
+                {data.isDecryptedLoading ? "Decrypting..." : isInitialized ? "Decrypt Data" : "Sign & Decrypt"}
               </Button>
             </div>
           </div>
@@ -316,7 +408,7 @@ export function DashboardOverview() {
               ) : data.isEncryptedLoading ? (
                 <div className="flex items-center">
                   <LoaderCircle className="h-4 w-4 animate-spin mr-2" />
-                  <span>Loading encrypted data...</span>
+                  <span>Loading encrypted data automatically...</span>
                 </div>
               ) : (
                 <div className="max-h-96 overflow-auto bg-muted p-2 rounded-md">
@@ -340,6 +432,14 @@ export function DashboardOverview() {
                   <LoaderCircle className="h-4 w-4 animate-spin mr-2" />
                   <span>Loading decrypted data...</span>
                 </div>
+              ) : data.encryptedData && !data.decryptedData && !isInitialized ? (
+                <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800">
+                  <AlertCircle className="h-4 w-4 text-blue-500" />
+                  <AlertTitle>Wallet Authentication Required</AlertTitle>
+                  <AlertDescription>
+                    Click "Sign & Decrypt" to authenticate with your wallet and decrypt this data.
+                  </AlertDescription>
+                </Alert>
               ) : (
                 <div className="max-h-96 overflow-auto bg-muted p-2 rounded-md">
                   <pre className="text-xs whitespace-pre-wrap">
