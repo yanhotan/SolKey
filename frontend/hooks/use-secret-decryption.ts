@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { api, decryptSecretWithWallet } from '@/lib/api';
 import { useWalletEncryption } from './use-wallet-encryption';
-import { deriveEncryptionKey } from '@/lib/wallet-auth';
+import { deriveEncryptionKey, SIGNATURE_MESSAGE } from '@/lib/wallet-auth';
 
 interface SecretData {
   id: string;
@@ -86,6 +86,23 @@ export function useSecretDecryption() {
       }
 
       try {
+        // CRITICAL: Verify encryption key exists in localStorage
+        const encryptionKey = localStorage.getItem('solkey:encryption-key');
+        if (!encryptionKey) {
+          console.log('Encryption key not found in localStorage, attempting to derive it...');
+          
+          // Try to derive it from the signature we just got
+          try {
+            await deriveEncryptionKey(SIGNATURE_MESSAGE, signature);
+            console.log('Successfully derived and stored encryption key');
+          } catch (derivationError) {
+            console.error('Failed to derive encryption key:', derivationError);
+            throw new Error('Failed to derive encryption key from signature');
+          }
+        } else {
+          console.log('Encryption key found in localStorage, proceeding with decryption');
+        }
+        
         // Use the API's decrypt method which handles both fetching and decrypting
         const result = await api.secrets.decrypt(secretId, {
           walletAddress: publicKey.toBase58(),

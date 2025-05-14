@@ -425,193 +425,194 @@ function decryptWithAesKey(encryptedValue: string, aesKey: string): string {
   return "example-decrypted-value"; // Example decrypted value
 }
 
-// Use the existing wallet authentication to decrypt a secret
+// Import the improved decryption method
+import { decryptSecret as decryptSecretFromLib } from "@/lib/secret-decryptor";
+
+// Update the decrypt method
 export async function decryptSecretWithWallet(
   encryptedValue: string,
   iv: string,
   authTag: string
 ): Promise<string> {
   try {
-    // Enhanced logging to diagnose decryption issues
-    console.log("Starting decryption with wallet-derived key:", { 
+    console.log("Starting decryption with improved method:", { 
       encryptedValueLength: encryptedValue?.length || 0,
       ivLength: iv?.length || 0,
       authTagLength: authTag?.length || 0
     });
     
-    // First check if we have the encryption key available
-    const encryptionKey = localStorage.getItem('solkey:encryption-key');
-    if (!encryptionKey) {
-      console.error("No encryption key in localStorage");
-      throw new Error("Encryption key not available. Please authenticate with your wallet first.");
-    }
-    
-    // 1. Validate and decode the parameters
-    if (!encryptedValue || !iv) {
-      console.error("Missing required encryption parameters:", { 
-        hasEncryptedValue: !!encryptedValue, 
-        hasIV: !!iv 
-      });
-      throw new Error("Missing required encryption parameters");
-    }
-    
-    // Import the encryption key from storage
-    const keyBytes = Uint8Array.from(atob(encryptionKey).split('').map(c => c.charCodeAt(0)));
-    console.log("Encryption key details:", {
-      keyBytesLength: keyBytes.length,
-      isCorrectLength: keyBytes.length === 32, // Should be 32 bytes for AES-256
-    });
-    
-    if (keyBytes.length !== 32) {
-      console.error("Invalid encryption key length:", keyBytes.length);
-      throw new Error("Invalid encryption key format");
-    }
-    
-    // Import the key into WebCrypto
-    const key = await crypto.subtle.importKey(
-      'raw',
-      keyBytes,
-      { name: 'AES-GCM', length: 256 },
-      false, // Don't allow export
-      ['decrypt']
-    );
-    
-    // 2. Process encrypted data - handle already combined ciphertext+authTag from backend
-    let encryptedBytes: Uint8Array;
-    
-    // The backend already combines ciphertext and authTag in the encryptedValue
-    // It's returned as base64, so we need to decode it
-    try {
-      console.log("Decoding base64 encrypted value from backend");
-      encryptedBytes = Uint8Array.from(atob(encryptedValue), c => c.charCodeAt(0));
-      console.log("Decoded encrypted data length:", encryptedBytes.length);
-    } catch (formatError) {
-      console.error("Failed to decode base64 encrypted value:", formatError);
-      throw new Error("Invalid encrypted data format - not valid base64");
-    }
-    
-    // 3. Process IV correctly (should be 16 bytes)
-    let ivBytes: Uint8Array;
-    try {
-      // The IV comes as a hex string from the backend
-      console.log("Decoding hex IV");
-      ivBytes = hexToUint8Array(iv);
-    } catch (ivError) {
-      console.error("Failed to process IV:", ivError);
-      throw new Error("Invalid IV format - not valid hex");
-    }
-    
-    if (ivBytes.length !== 16) {
-      console.error("Incorrect IV length:", ivBytes.length);
-      throw new Error(`IV must be exactly 16 bytes (got ${ivBytes.length})`);
-    }
-    
-    // 4. Check data length
-    if (encryptedBytes.length < 28) { // Minimum viable size (some ciphertext + 16 byte authTag)
-      console.error("Encrypted data too small:", encryptedBytes.length);
-      throw new Error("Encrypted data is too small to be valid");
-    }
-    
-    // 5. Set up auth data if needed (used for verifying data integrity)
-    // This should be empty for compatibility with backend Node.js crypto
-    const authData = new Uint8Array(0);
-    
-    // 6. Attempt decryption with robust error handling
-    console.log("Attempting decryption with parameters:", {
-      algorithm: "AES-GCM",
-      ivLength: ivBytes.length,
-      encryptedDataLength: encryptedBytes.length,
-      keyType: key.type,
-      hasAuthData: false
-    });
-    
-    let decrypted: ArrayBuffer;
-    try {
-      // Try first with the combined data as is - the most likely format from backend
-      decrypted = await crypto.subtle.decrypt(
-        {
-          name: 'AES-GCM',
-          iv: ivBytes,
-          // No additional data used in backend encryption
-        },
-        key,
-        encryptedBytes
-      );
-    } catch (error) {
-      console.error("First decryption attempt failed:", error);
-      
-      try {
-        console.log("Trying alternative format: isolating authTag from end");
-        
-        // In AES-GCM, the auth tag is the last 16 bytes
-        const authTagLength = 16;
-        const ciphertextLength = encryptedBytes.length - authTagLength;
-        
-        // Extract ciphertext and auth tag
-        const ciphertext = encryptedBytes.slice(0, ciphertextLength);
-        const authTagFromEnd = encryptedBytes.slice(ciphertextLength);
-        
-        console.log("Extracted components:", {
-          ciphertextLength,
-          authTagLength: authTagFromEnd.length
-        });
-        
-        // Ensure we have valid sizes
-        if (ciphertextLength <= 0 || authTagFromEnd.length !== 16) {
-          throw new Error("Invalid encrypted data structure");
-        }
-        
-        // Try using the separate authTag from the response
-        if (authTag && authTag.length > 0) {
-          console.log("Using separate auth tag from response");
-          const separateAuthTag = hexToUint8Array(authTag);
-          
-          // Try explicit algorithm parameters
-          decrypted = await crypto.subtle.decrypt(
-            {
-              name: 'AES-GCM',
-              iv: ivBytes,
-              tagLength: 128 // 16 bytes * 8 = 128 bits
-            },
-            key,
-            // Use extracted ciphertext + separate auth tag
-            new Uint8Array([...ciphertext, ...separateAuthTag])
-          );
-        } else {
-          // Last attempt with just the extracted components
-          decrypted = await crypto.subtle.decrypt(
-            {
-              name: 'AES-GCM',
-              iv: ivBytes,
-              tagLength: 128
-            },
-            key,
-            // Use the original data but ensure WebCrypto understands where the authTag is
-            encryptedBytes
-          );
-        }
-      } catch (fallbackError) {
-        console.error("All decryption attempts failed:", fallbackError);
-        throw new Error("Decryption failed - data format incompatible with WebCrypto");
-      }
-    }
-    
-    // Success! Convert decrypted data to string
-    const decryptedText = new TextDecoder().decode(decrypted);
-    console.log("Decryption successful, text length:", decryptedText.length);
-    
-    return decryptedText;
+    // Use the improved decryptSecret function from secret-decryptor.ts
+    return await decryptSecretFromLib(encryptedValue, iv, authTag);
   } catch (error) {
-    console.error('Error decrypting secret:', error);
-    throw new Error(`Failed to decrypt: ${error instanceof Error ? error.message : String(error)}`);
+    console.error('Error in decryptSecretWithWallet:', error);
+    throw error instanceof Error ? error : new Error(String(error));
+  }
+}
+
+// Helper function for base64 to Uint8Array conversion
+function base64ToUint8Array(base64: string): Uint8Array {
+  try {
+    // For compatibility with all browsers
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  } catch (error) {
+    console.error("Base64 conversion error:", error);
+    throw new Error("Failed to convert base64 data");
   }
 }
 
 // Helper for hex to Uint8Array conversion
 function hexToUint8Array(hex: string): Uint8Array {
-  const matches = hex.match(/[0-9a-f]{2}/gi) || [];
-  return new Uint8Array(matches.map(byte => parseInt(byte, 16)));
+  // Ensure the hex string is valid
+  if (!hex || typeof hex !== 'string') {
+    console.error('Invalid hex string provided:', hex);
+    return new Uint8Array(0);
+  }
+
+  // Remove any non-hex characters (like 0x prefix or spaces)
+  const cleanHex = hex.replace(/[^0-9a-fA-F]/g, '');
+  
+  // Ensure we have an even number of characters (each byte is 2 hex chars)
+  if (cleanHex.length % 2 !== 0) {
+    console.warn('Hex string has odd length, padding with 0:', cleanHex);
+  }
+  
+  // Add a leading zero if needed to ensure even length
+  const paddedHex = cleanHex.length % 2 !== 0 ? '0' + cleanHex : cleanHex;
+  
+  // Convert the hex string to bytes
+  const bytes = new Uint8Array(paddedHex.length / 2);
+  for (let i = 0; i < paddedHex.length; i += 2) {
+    bytes[i / 2] = parseInt(paddedHex.substring(i, i + 2), 16);
+  }
+  
+  // Log the conversion result for debugging
+  console.log(`Converted hex string (length ${hex.length}) to Uint8Array (length ${bytes.length})`);
+  
+  return bytes;
 }
 
 // Storage key for encryption key
 const ENCRYPTION_KEY_STORAGE_KEY = 'solkey:encryption-key';
+
+// Diagnostic function to check browser's WebCrypto compatibility
+interface WebCryptoCompatibilityDetails {
+  error?: string;
+  cryptoSubtle?: string;
+  generateKey?: string;
+  keyLength?: number;
+  encrypt12ByteIV?: string;
+  decrypt12ByteIV?: string;
+  encrypt16ByteIV?: string;
+  decrypt16ByteIV?: string;
+  [key: string]: any; // Allow additional properties
+}
+
+export async function checkWebCryptoCompatibility(): Promise<{ 
+  supported: boolean; 
+  details: WebCryptoCompatibilityDetails;
+  iv12Supported: boolean;
+  iv16Supported: boolean;
+}> {
+  const results = {
+    supported: false,
+    details: {} as WebCryptoCompatibilityDetails,
+    iv12Supported: false,
+    iv16Supported: false
+  };
+  
+  try {
+    // Check if crypto.subtle is available
+    if (!window.crypto || !window.crypto.subtle) {
+      results.details.error = "WebCrypto API (crypto.subtle) is not available in this browser";
+      return results;
+    }
+    
+    results.details.cryptoSubtle = "Available";
+    
+    // Test generating an AES-GCM key
+    try {
+      const testKey = await window.crypto.subtle.generateKey(
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+      );
+      results.details.generateKey = "Supported";
+      
+      // Export the key to check its format
+      const exportedKey = await window.crypto.subtle.exportKey("raw", testKey);
+      results.details.keyLength = exportedKey.byteLength;
+      
+      // Test encryption with 12-byte IV (standard for WebCrypto)
+      const testData = new TextEncoder().encode("test data for WebCrypto");
+      const iv12 = crypto.getRandomValues(new Uint8Array(12));
+      
+      try {
+        const encrypted12 = await window.crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: iv12, tagLength: 128 },
+          testKey,
+          testData
+        );
+        results.details.encrypt12ByteIV = "Supported";
+        results.iv12Supported = true;
+        
+        // Test decryption with 12-byte IV
+        try {
+          const decrypted12 = await window.crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: iv12, tagLength: 128 },
+            testKey,
+            encrypted12
+          );
+          results.details.decrypt12ByteIV = "Supported";
+        } catch (decryptError) {
+          results.details.decrypt12ByteIV = `Failed: ${decryptError instanceof Error ? decryptError.message : String(decryptError)}`;
+        }
+      } catch (encryptError) {
+        results.details.encrypt12ByteIV = `Failed: ${encryptError instanceof Error ? encryptError.message : String(encryptError)}`;
+      }
+      
+      // Test with 16-byte IV (Node.js standard)
+      const iv16 = crypto.getRandomValues(new Uint8Array(16));
+      
+      try {
+        const encrypted16 = await window.crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: iv16, tagLength: 128 },
+          testKey,
+          testData
+        );
+        results.details.encrypt16ByteIV = "Supported";
+        results.iv16Supported = true;
+        
+        // Test decryption with 16-byte IV
+        try {
+          const decrypted16 = await window.crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: iv16, tagLength: 128 },
+            testKey,
+            encrypted16
+          );
+          results.details.decrypt16ByteIV = "Supported";
+        } catch (decryptError) {
+          results.details.decrypt16ByteIV = `Failed: ${decryptError instanceof Error ? decryptError.message : String(decryptError)}`;
+        }
+      } catch (encryptError) {
+        results.details.encrypt16ByteIV = `Failed: ${encryptError instanceof Error ? encryptError.message : String(encryptError)}`;
+      }
+      
+    } catch (keyGenError) {
+      results.details.generateKey = `Failed: ${keyGenError instanceof Error ? keyGenError.message : String(keyGenError)}`;
+      return results;
+    }
+    
+    // Overall WebCrypto support
+    results.supported = results.iv12Supported || results.iv16Supported;
+    
+    return results;
+  } catch (error) {
+    results.details.error = error instanceof Error ? error.message : String(error);
+    return results;
+  }
+}

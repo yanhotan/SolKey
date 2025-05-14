@@ -25,7 +25,10 @@ function hexToUint8Array(hex: string): Uint8Array {
     
     // Convert to byte array
     const matches = paddedHex.match(/[0-9a-f]{2}/gi) || [];
-    return new Uint8Array(matches.map(byte => parseInt(byte, 16)));
+    const bytes = new Uint8Array(matches.map(byte => parseInt(byte, 16)));
+    
+    console.log(`Converted hex string length ${cleanHex.length} to Uint8Array length ${bytes.length}`);
+    return bytes;
   } catch (error) {
     console.error("Hex conversion error:", error);
     throw new Error("Failed to convert hex to binary");
@@ -95,9 +98,17 @@ export async function decryptSecret(
     
     // Convert hex IV to binary
     const ivBytes = hexToUint8Array(iv);
-    if (ivBytes.length !== 16) {
-      console.error("Invalid IV length:", ivBytes.length);
-      throw new Error("Invalid IV format or length");
+    console.log("IV details:", {
+      originalHexLength: iv.length,
+      decodedByteLength: ivBytes.length,
+      expectedLength: 12, // Now expecting 12-byte IV from backend
+      firstBytes: Array.from(ivBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
+    });
+    
+    // Backend now uses 12-byte IV for better WebCrypto compatibility
+    if (ivBytes.length !== 12 && ivBytes.length !== 16) {
+      console.error(`Invalid IV length: ${ivBytes.length} bytes, expected 12 or 16 bytes`);
+      throw new Error("Invalid IV format or length, must be 12 or 16 bytes");
     }
     
     // Convert base64 encrypted data to binary
@@ -120,10 +131,13 @@ export async function decryptSecret(
     
     // Attempt decryption with WebCrypto (the encrypted data already includes the auth tag)
     try {
+      console.log("Decryption attempt #1: Using direct encrypted data with WebCrypto");
+      
       const decrypted = await crypto.subtle.decrypt(
         {
           name: 'AES-GCM',
-          iv: ivBytes
+          iv: ivBytes,
+          tagLength: 128 // 16 bytes * 8 bits = 128 bits
         },
         key,
         encryptedBytes
@@ -134,38 +148,120 @@ export async function decryptSecret(
       console.log("Decryption successful, text length:", decryptedText.length);
       return decryptedText;
     } catch (error) {
-      console.error("Decryption failed:", error);
+      console.error("Primary decryption failed:", error);
       
-      // Fallback for backward compatibility with older data format
-      console.log("Attempting fallback decryption approach...");
+      // Fallback approach #1: Try with auth tag separated
+      console.log("Attempting fallback decryption approach #1: Separating ciphertext and auth tag");
       
-      // Try with the separate auth tag for older data
+      try {
+        // In AES-GCM, auth tag is typically 16 bytes and is at the end
+        const authTagLength = 16;
+        const ciphertextLength = encryptedBytes.length - authTagLength;
+        
+        if (ciphertextLength <= 0) {
+          throw new Error("Encrypted data too short to extract auth tag");
+        }
+        
+        const ciphertext = encryptedBytes.slice(0, ciphertextLength);
+        const extractedTag = encryptedBytes.slice(ciphertextLength);
+        
+        console.log("Split data details:", {
+          totalLength: encryptedBytes.length,
+          ciphertextLength,
+          extractedTagLength: extractedTag.length,
+          extractedTagFirstBytes: Array.from(extractedTag.slice(0, 4))
+            .map(b => b.toString(16).padStart(2, '0')).join('')
+        });
+        
+        const decrypted = await crypto.subtle.decrypt(
+          {
+            name: 'AES-GCM',
+            iv: ivBytes,
+            tagLength: 128
+          },
+          key,
+          encryptedBytes // Still using the full data
+        );
+        
+        const decryptedText = new TextDecoder().decode(decrypted);
+        console.log("Fallback approach #1 succeeded, text length:", decryptedText.length);
+        return decryptedText;
+      } catch (fallback1Error) {
+        console.error("Fallback approach #1 failed:", fallback1Error);
+      }
+      
+      // Fallback #2: Try with the separate auth tag provided by backend
+      console.log("Attempting fallback approach #2: Using separate auth tag from backend");
+      
       try {
         const authTagBytes = hexToUint8Array(authTag);
         if (authTagBytes.length === 0) {
           throw new Error("Invalid auth tag for fallback");
         }
         
+        console.log("Auth tag details:", {
+          originalHexLength: authTag.length,
+          decodedByteLength: authTagBytes.length,
+          firstBytes: Array.from(authTagBytes.slice(0, 4))
+            .map(b => b.toString(16).padStart(2, '0')).join('')
+        });
+        
         // This is the old way, combining them manually
         const combinedData = new Uint8Array(encryptedBytes.length + authTagBytes.length);
         combinedData.set(encryptedBytes);
         combinedData.set(authTagBytes, encryptedBytes.length);
         
+        console.log("Combined data details:", {
+          encryptedBytesLength: encryptedBytes.length,
+          authTagBytesLength: authTagBytes.length,
+          combinedLength: combinedData.length
+        });
+        
         const decrypted = await crypto.subtle.decrypt(
           {
             name: 'AES-GCM',
-            iv: ivBytes
+            iv: ivBytes,
+            tagLength: 128
           },
           key,
           combinedData
         );
         
         const decryptedText = new TextDecoder().decode(decrypted);
-        console.log("Fallback decryption successful, text length:", decryptedText.length);
+        console.log("Fallback approach #2 succeeded, text length:", decryptedText.length);
         return decryptedText;
-      } catch (fallbackError) {
-        console.error("Fallback decryption also failed:", fallbackError);
-        throw new Error("Failed to decrypt data. Format may be incompatible.");
+      } catch (fallback2Error) {
+        console.error("Fallback approach #2 failed:", fallback2Error);
+        
+        // Fallback #3: Try with 12-byte IV if we're using 16-byte
+        if (ivBytes.length === 16) {
+          console.log("Attempting fallback approach #3: Using first 12 bytes of 16-byte IV");
+          try {
+            const iv12Bytes = ivBytes.slice(0, 12);
+            
+            console.log("12-byte IV:", Array.from(iv12Bytes)
+              .map(b => b.toString(16).padStart(2, '0')).join(''));
+              
+            const decrypted = await crypto.subtle.decrypt(
+              {
+                name: 'AES-GCM',
+                iv: iv12Bytes,
+                tagLength: 128
+              },
+              key,
+              encryptedBytes
+            );
+            
+            const decryptedText = new TextDecoder().decode(decrypted);
+            console.log("Fallback approach #3 succeeded, text length:", decryptedText.length);
+            return decryptedText;
+          } catch (fallback3Error) {
+            console.error("Fallback approach #3 failed:", fallback3Error);
+          }
+        }
+        
+        // If all fallbacks failed, throw a detailed error
+        throw new Error("All decryption approaches failed. Your browser may not support WebCrypto properly or the data format is incompatible.");
       }
     }
   } catch (error) {

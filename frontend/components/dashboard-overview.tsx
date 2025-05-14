@@ -13,13 +13,17 @@ import {
   XCircle, 
   RefreshCcw, 
   LoaderCircle,
-  AlertCircle 
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Wrench
 } from "lucide-react";
 import SecretViewer from "./secret-viewer";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { api } from "@/lib/api";
+import { api, checkWebCryptoCompatibility } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useWalletEncryption } from "@/hooks/use-wallet-encryption";
+import { deriveEncryptionKey } from "@/lib/wallet-auth";
 
 interface Secret {
   id: string;
@@ -43,8 +47,13 @@ export function DashboardOverview() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verificationData, setVerificationData] = useState<Record<string, VerificationData>>({});
+  const [cryptoInfo, setCryptoInfo] = useState<any>(null);
+  const [showCryptoInfo, setShowCryptoInfo] = useState(false);
+  const [runningDiagnostic, setRunningDiagnostic] = useState(false);
   const { publicKey, connected, signMessage } = useWallet();
   const { isInitialized, handleSignMessage } = useWalletEncryption();
+  const [diagnosticResults, setDiagnosticResults] = useState<any>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   const stats = [
     {
@@ -209,6 +218,15 @@ export function DashboardOverview() {
       const message = new TextEncoder().encode("auth-to-decrypt");
       const signature = await signMessage(message);
       const signatureBase64 = Buffer.from(signature).toString("base64");
+      
+      // CRITICAL: Derive encryption key from this signature
+      try {
+        await deriveEncryptionKey("auth-to-decrypt", signatureBase64);
+        console.log("Encryption key derived and stored successfully from signature");
+      } catch (derivationError) {
+        console.error("Failed to derive encryption key:", derivationError);
+        throw new Error("Failed to derive encryption key needed for decryption");
+      }
 
       console.log(`Sending decrypt request for secret ${secretId}`);
       const decryptedResult = await api.secrets.decrypt(secretId, {
@@ -481,6 +499,98 @@ export function DashboardOverview() {
     );
   };
 
+  // Run WebCrypto diagnostic check
+  const runCryptoDiagnostic = async () => {
+    setRunningDiagnostic(true);
+    try {
+      const compatibility = await checkWebCryptoCompatibility();
+      setCryptoInfo(compatibility);
+      setShowCryptoInfo(true);
+    } catch (error) {
+      setCryptoInfo({
+        supported: false,
+        details: { error: error instanceof Error ? error.message : String(error) },
+        iv12Supported: false,
+        iv16Supported: false
+      });
+    } finally {
+      setRunningDiagnostic(false);
+    }
+  };
+
+  // Add this right after the stats.map rendering block, before the error alert
+  const renderDiagnosticButton = () => (
+    <Card className="col-span-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">Encryption Diagnostics</CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={runCryptoDiagnostic}
+          disabled={runningDiagnostic}
+        >
+          {runningDiagnostic ? (
+            <LoaderCircle className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <Wrench className="h-4 w-4 mr-2" />
+          )}
+          Run Diagnostic
+        </Button>
+      </CardHeader>
+      
+      {cryptoInfo && showCryptoInfo && (
+        <CardContent>
+          <Alert className={cryptoInfo.supported ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}>
+            <div className="flex justify-between items-start w-full">
+              <div>
+                <AlertTitle className={cryptoInfo.supported ? "text-green-800" : "text-red-800"}>
+                  WebCrypto {cryptoInfo.supported ? "Supported" : "Not Fully Supported"}
+                </AlertTitle>
+                <AlertDescription>
+                  <div className="mt-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>12-byte IV: {cryptoInfo.iv12Supported ? "✅" : "❌"}</div>
+                      <div>16-byte IV: {cryptoInfo.iv16Supported ? "✅" : "❌"}</div>
+                    </div>
+                    
+                    <div className="mt-4 mb-2 font-medium">Detailed Results:</div>
+                    <pre className="text-xs bg-black/5 p-2 rounded-md overflow-auto max-h-40">
+                      {JSON.stringify(cryptoInfo.details, null, 2)}
+                    </pre>
+                  </div>
+                </AlertDescription>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowCryptoInfo(false)}
+                className="mt-0"
+              >
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          </Alert>
+        </CardContent>
+      )}
+    </Card>
+  );
+
+  // Add this function to run diagnostics
+  const runWebCryptoDiagnostics = async () => {
+    try {
+      setDiagnosticResults({ running: true });
+      const results = await checkWebCryptoCompatibility();
+      console.log("WebCrypto compatibility check results:", results);
+      setDiagnosticResults(results);
+    } catch (error) {
+      console.error("Error running WebCrypto diagnostics:", error);
+      setDiagnosticResults({ 
+        error: true, 
+        message: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  };
+
   return (
     <>
       {stats.map((stat, index) => (
@@ -497,6 +607,8 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
       ))}
+      
+      {renderDiagnosticButton()}
       
       {error && (
         <Alert variant="destructive" className="col-span-full">
@@ -526,6 +638,90 @@ export function DashboardOverview() {
           {secrets.map(secret => renderVerificationResults(secret))}
         </>
       )}
+      
+      {/* WebCrypto Diagnostics */}
+      <div className="flex flex-col gap-2 mt-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Diagnostics</h3>
+          <Button 
+            onClick={() => setShowDiagnostics(!showDiagnostics)} 
+            variant="outline" 
+            size="sm"
+          >
+            {showDiagnostics ? "Hide Diagnostics" : "Show Diagnostics"}
+          </Button>
+        </div>
+        
+        {showDiagnostics && (
+          <div className="bg-muted p-4 rounded-lg">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-medium">WebCrypto Compatibility</h4>
+              <Button
+                onClick={runWebCryptoDiagnostics}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Wrench className="h-4 w-4" />
+                Run Diagnostics
+              </Button>
+            </div>
+            
+            {diagnosticResults?.running && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+                Running compatibility checks...
+              </div>
+            )}
+            
+            {diagnosticResults && !diagnosticResults.running && !diagnosticResults.error && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">WebCrypto API Supported:</span>
+                  {diagnosticResults.supported ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">12-byte IV Support:</span>
+                  {diagnosticResults.iv12Supported ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">16-byte IV Support:</span>
+                  {diagnosticResults.iv16Supported ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+                
+                <div className="mt-4">
+                  <details>
+                    <summary className="cursor-pointer text-sm text-muted-foreground">Detailed Results</summary>
+                    <pre className="mt-2 p-2 bg-black text-white text-xs rounded overflow-auto max-h-40">
+                      {JSON.stringify(diagnosticResults.details, null, 2)}
+                    </pre>
+                  </details>
+                </div>
+              </div>
+            )}
+            
+            {diagnosticResults?.error && (
+              <div className="text-red-500">
+                Error running diagnostics: {diagnosticResults.message}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </>
   );
 }
