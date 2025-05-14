@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect , useState } from "react";
 import {
   Card,
   CardContent,
@@ -14,12 +14,17 @@ import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
+import { ConnectWalletButton } from "./connect-wallet-wallet-button";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { BillingPayment } from "./billing-payment";
+import { toast } from "sonner";
 
 export function BillingPlans() {
   const [currentPlan, setCurrentPlan] = useState("free");
   const [isConnectWalletOpen, setIsConnectWalletOpen] = useState(false);
   const [currency, setCurrency] = useState<"usdc" | "sol">("usdc");
 
+  
   const plans = [
     {
       id: "free",
@@ -226,51 +231,75 @@ function SolanaWalletConnect({
   onClose: () => void;
   currency: "usdc" | "sol";
 }) {
+  const { publicKey, connected } = useWallet();
+  const [walletAddress, setWalletAddress] = useState<string>("");
+  const [showPayment, setShowPayment] = useState(false);
+
+  
+  // Update wallet address when connection status changes
+  useEffect(() => {
+    if (connected && publicKey) {
+      const address = publicKey.toString();
+      // Format address to show first 4 and last 4 characters
+      const formattedAddress = `${address.substring(0, 4)}...${address.substring(address.length - 4)}`;
+      setWalletAddress(formattedAddress);
+    } else {
+      setWalletAddress("");
+    }
+  }, [connected, publicKey]);
+
+    const handleContinue = () => {
+    setShowPayment(true);
+  };
+
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-      <motion.div
-        className="bg-background border rounded-lg shadow-lg max-w-md w-full p-6"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: "spring", duration: 0.4 }}
-      >
-        <h3 className="text-xl font-bold mb-4">Connect Your Solana Wallet</h3>
-        <p className="text-muted-foreground mb-6">
-          Connect your Solana wallet to make a payment in{" "}
-          {currency === "usdc" ? "USDC" : "SOL"}.
-          {currency === "sol" && " Enjoy a 15% discount when paying with SOL!"}
-        </p>
-
-        <div className="space-y-3">
-          <Button
-            variant="outline"
-            className="w-full justify-between"
-            onClick={onClose}
+    <>
+      {!showPayment ? (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <motion.div
+            className="bg-background border rounded-lg shadow-lg max-w-md w-full p-6"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", duration: 0.4 }}
           >
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-purple-500 flex items-center justify-center text-white">
-                <svg viewBox="0 0 32 32" className="h-3 w-3">
-                  <path
-                    d="M16 0C7.163 0 0 7.163 0 16s7.163 16 16 16 16-7.163 16-16S24.837 0 16 0z"
-                    fill="#AB9FF2"
-                  />
-                  <path
-                    d="M17.2 19.84l-4.48 4.48c-.32.32-.8.32-1.12 0l-1.12-1.12c-.32-.32-.32-.8 0-1.12l4.48-4.48-4.48-4.48c-.32-.32-.32-.8 0-1.12l1.12-1.12c.32-.32.8-.32 1.12 0l4.48 4.48 4.48-4.48c.32-.32.8-.32 1.12 0l1.12 1.12c.32.32.32.8 0 1.12l-4.48 4.48 4.48 4.48c.32.32.32.8 0 1.12l-1.12 1.12c-.32.32-.8.32-1.12 0l-4.48-4.48z"
-                    fill="#fff"
-                  />
-                </svg>
-              </div>
-              <span>Phantom</span>
+            {/* Existing connect wallet content */}
+            <h3 className="text-xl font-bold mb-4">Connect Your Solana Wallet</h3>
+            <p className="text-muted-foreground mb-6">
+              Connect your Solana wallet to make a payment in{" "}
+              {currency === "usdc" ? "USDC" : "SOL"}.
+              {currency === "sol" && " Enjoy a 15% discount when paying with SOL!"}
+            </p>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 p-3 border rounded-md hover:bg-accent/50 cursor-pointer">
+                <div className="h-6 w-6 rounded-full bg-purple-500 flex items-center justify-center text-white">
+                  <svg viewBox="0 0 32 32" className="h-3 w-3">
+                    <path
+                      d="M16 0C7.163 0 0 7.163 0 16s7.163 16 16 16 16-7.163 16-16S24.837 0 16 0z"
+                      fill="#AB9FF2"
+                    />
+                    <path
+                      d="M17.2 19.84l-4.48 4.48c-.32.32-.8.32-1.12 0l-1.12-1.12c-.32-.32-.32-.8 0-1.12l4.48-4.48-4.48-4.48c-.32-.32-.32-.8 0-1.12l1.12-1.12c.32-.32.8-.32 1.12 0l4.48 4.48 4.48-4.48c.32-.32.8-.32 1.12 0l1.12 1.12c.32.32.32.8 0 1.12l-4.48 4.48 4.48 4.48c.32.32.32.8 0 1.12l-1.12 1.12c-.32.32-.8.32-1.12 0l-4.48-4.48z"
+                      fill="#fff"
+                    />
+                  </svg>
+                </div>
+                <div className="flex flex-1 items-center w-full justify-between"> 
+                  <span>Phantom</span>
+                  <span>
+                    {connected && walletAddress ? (
+                      <Button variant="ghost" size="sm" className="gap-2">
+                        <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                        {walletAddress}
+                      </Button>
+                    ) : (
+                      <ConnectWalletButton />
+                    )}
+                  </span>
+                </div>
             </div>
-            <span>Connect</span>
-          </Button>
 
-          <Button
-            variant="outline"
-            className="w-full justify-between"
-            onClick={onClose}
-          >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 p-3 border rounded-md hover:bg-accent/50 cursor-pointer">
               <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center text-white">
                 <svg viewBox="0 0 32 32" className="h-3 w-3">
                   <path
@@ -283,34 +312,52 @@ function SolanaWalletConnect({
                   />
                 </svg>
               </div>
-              <span>Solflare</span>
-            </div>
-            <span>Connect</span>
-          </Button>
-
-          {/* <Button variant="outline" className="w-full justify-between" onClick={onClose}>
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                <svg viewBox="0 0 32 32" className="h-3 w-3">
-                  <path d="M16 0C7.163 0 0 7.163 0 16s7.163 16 16 16 16-7.163 16-16S24.837 0 16 0z" fill="#0074D9" />
-                  <path
-                    d="M22.4 12.8h-4.8V8c0-.88-.72-1.6-1.6-1.6s-1.6.72-1.6 1.6v4.8H9.6c-.88 0-1.6.72-1.6 1.6s.72 1.6 1.6 1.6h4.8V20c0 .88.72 1.6 1.6 1.6s1.6-.72 1.6-1.6v-4.8h4.8c.88 0 1.6-.72 1.6-1.6s-.72-1.6-1.6-1.6z"
-                    fill="#fff"
-                  />
-                </svg>
+              <div className="flex flex-1 items-center w-full justify-between"> 
+                <span>Solflare</span>
+                <span>
+                  {connected && walletAddress ? (
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                      {walletAddress}
+                    </Button>
+                  ) : (
+                    <ConnectWalletButton />
+                  )}
+                </span>
               </div>
-              <span>Backpack</span>
             </div>
-            <span>Connect</span>
-          </Button> */}
         </div>
 
-        <div className="mt-6 flex justify-end">
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
+        <div className="mt-6 flex justify-end space-x-2">
+          {connected && (
+                <Button variant="default" onClick={handleContinue}>
+                  Continue to Payment
+                </Button>
+              )}
+              <Button variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </motion.div>
         </div>
-      </motion.div>
-    </div>
+      ) : (
+        <BillingPayment
+          onClose={onClose}
+          onSuccess={() => {
+            setTimeout(() => {
+      toast.success("Subscription upgraded successfully!");
+      onClose();
+            }, 3000);
+          }}
+          onError={(error) => {
+            console.error("Payment error:", error);
+            toast.error("Payment failed. Please try again.");
+            setShowPayment(false); // Go back to wallet connection
+          }}
+          amount={currency === "sol" ? 0.5 : 20}
+          currency={currency}
+        />
+      )}
+    </>
   );
 }
