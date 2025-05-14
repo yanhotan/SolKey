@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { api, decryptSecretWithWallet } from '@/lib/api';
 import { useWalletEncryption } from './use-wallet-encryption';
+import { deriveEncryptionKey, SIGNATURE_MESSAGE } from '@/lib/wallet-auth';
 
 interface SecretData {
   id: string;
@@ -38,7 +39,18 @@ export function useSecretDecryption() {
       // Create a message to sign for authentication
       const message = new TextEncoder().encode('auth-to-decrypt');
       const signature = await signMessage(message);
-      return Buffer.from(signature).toString('base64');
+      const signatureBase64 = Buffer.from(signature).toString('base64');
+      
+      // THIS IS THE CRITICAL ADDITION - derive and store the encryption key
+      try {
+        await deriveEncryptionKey('auth-to-decrypt', signatureBase64);
+        console.log("Encryption key derived successfully from signature");
+      } catch (derivationError) {
+        console.error("Failed to derive encryption key:", derivationError);
+        // Still proceed with API call as this might be a different issue
+      }
+      
+      return signatureBase64;
     } catch (error) {
       if (error instanceof Error && error.message.includes('User rejected')) {
         throw new Error('Message signing was cancelled by user');
@@ -74,6 +86,23 @@ export function useSecretDecryption() {
       }
 
       try {
+        // CRITICAL: Verify encryption key exists in localStorage
+        const encryptionKey = localStorage.getItem('solkey:encryption-key');
+        if (!encryptionKey) {
+          console.log('Encryption key not found in localStorage, attempting to derive it...');
+          
+          // Try to derive it from the signature we just got
+          try {
+            await deriveEncryptionKey(SIGNATURE_MESSAGE, signature);
+            console.log('Successfully derived and stored encryption key');
+          } catch (derivationError) {
+            console.error('Failed to derive encryption key:', derivationError);
+            throw new Error('Failed to derive encryption key from signature');
+          }
+        } else {
+          console.log('Encryption key found in localStorage, proceeding with decryption');
+        }
+        
         // Use the API's decrypt method which handles both fetching and decrypting
         const result = await api.secrets.decrypt(secretId, {
           walletAddress: publicKey.toBase58(),
@@ -164,4 +193,4 @@ export function useSecretDecryption() {
     loading,
     errors
   };
-} 
+}

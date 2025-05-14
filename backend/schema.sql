@@ -36,7 +36,6 @@ CREATE TABLE secrets (
     encrypted_value TEXT NOT NULL,
     type VARCHAR(50) NOT NULL DEFAULT 'String' CHECK (type IN ('String', 'Number', 'Boolean', 'JSON', 'Array')),
     iv VARCHAR(32) NOT NULL,
-    auth_tag VARCHAR(32) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -49,7 +48,6 @@ CREATE TABLE secret_keys (
     encrypted_aes_key TEXT NOT NULL,
     nonce VARCHAR(32) NOT NULL,
     ephemeral_public_key TEXT NOT NULL,
-    auth_tag VARCHAR(32) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(secret_id, wallet_address)
 );
