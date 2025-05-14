@@ -25,21 +25,21 @@ export function NewProjectForm() {
   })
   const router = useRouter()
   const { connected } = useWallet()
-  const { isInitialized, handleSignMessage } = useWalletEncryption()
+  // const { isInitialized, handleSignMessage } = useWalletEncryption()
 
   // Automatically initialize encryption when wallet is connected
-  useEffect(() => {
-    if (connected && !isInitialized && !isLoading) {
-      handleSignMessage().catch((err: unknown) => {
-        console.error('Failed to initialize wallet encryption:', err);
-        toast({
-          title: "Wallet Error",
-          description: err instanceof Error ? err.message : 'Failed to initialize encryption',
-          variant: "destructive",
-        });
-      });
-    }
-  }, [connected, isInitialized, handleSignMessage, isLoading]);
+  // useEffect(() => {
+  //   if (connected && !isInitialized && !isLoading) {
+  //     handleSignMessage().catch((err: unknown) => {
+  //       console.error('Failed to initialize wallet encryption:', err);
+  //       toast({
+  //         title: "Wallet Error",
+  //         description: err instanceof Error ? err.message : 'Failed to initialize encryption',
+  //         variant: "destructive",
+  //       });
+  //     });
+  //   }
+  // }, [connected, isInitialized, handleSignMessage, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,10 +50,10 @@ export function NewProjectForm() {
         throw new Error('Please connect your wallet first');
       }
 
-      if (!isInitialized) {
-        // Try to initialize encryption
-        await handleSignMessage();
-      }
+      // if (!isInitialized) {
+      //   // Try to initialize encryption
+      //   await handleSignMessage();
+      // }
 
       // Get the encryption key
       // const encryptionKey = localStorage.getItem('solkey_encryption_key');
@@ -221,11 +221,10 @@ export function NewProjectForm() {
           </Button>
           <Button 
             type="submit" 
-            disabled={isLoading || !projectName.trim() || !connected || !isInitialized}
+            disabled={isLoading || !projectName.trim() || !connected }
           >
             {isLoading ? "Creating Project..." : 
              !connected ? "Connect Wallet to Create" :
-             !isInitialized ? "Initialize Encryption" :
              "Create Project"}
           </Button>
         </CardFooter>
