@@ -23,6 +23,7 @@ export function QuickActions() {
     //   icon: <Key className="h-4 w-4" />,
     //   href: "/dashboard/tokens",
     // },
+
   ]
 
   return (

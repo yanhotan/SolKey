@@ -53,9 +53,10 @@ export function ProjectsList() {
       try {
         const res = await fetch("http://localhost:3002/api/projects");
         const data = await res.json();
-        setProjects(data);
+        setProjects(Array.isArray(data) ? data : data.projects || []);
       } catch (error) {
         console.error("Failed to fetch projects:", error);
+        setProjects([]); // Set to empty array on error
       }
     }
 
@@ -63,11 +64,11 @@ export function ProjectsList() {
   }, []);
 
   // Filter projects based on search query
-  const filteredProjects = projects.filter(
+  const filteredProjects = Array.isArray(projects) ? projects.filter(
     (project) =>
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ) : [];
 
   return (
     <div className="space-y-4">

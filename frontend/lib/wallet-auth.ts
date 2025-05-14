@@ -2,7 +2,7 @@ import { sha256 } from "@noble/hashes/sha256"
 import { bytesToHex } from "@noble/hashes/utils"
 
 // The message that will be signed by the wallet
-export const SIGNATURE_MESSAGE = "Sign this message to securely access your encrypted secrets on SolSecrets"
+export const SIGNATURE_MESSAGE = "auth-to-decrypt"
 
 // Solana network to use
 export const SOLANA_NETWORK = "devnet"
