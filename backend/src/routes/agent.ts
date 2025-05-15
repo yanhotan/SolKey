@@ -16,7 +16,11 @@ interface ChatRequestBody {
 }
 
 interface ProjectRequestBody {
-  message: string
+  message?: string;
+  name?: string;
+  description?: string;
+  environments?: string[];
+  creatorId?: string;
 }
 
 router.post('/agent', async (req: Request<{}, {}, ChatRequestBody>, res: Response) => {
@@ -25,7 +29,7 @@ router.post('/agent', async (req: Request<{}, {}, ChatRequestBody>, res: Respons
 
     const systemMessage: ChatCompletionSystemMessageParam = {
       role: 'system',
-      content: `You are SolSecure AI Agent. You can help users create and manage projects. When a user wants to create a project, use the create_project tool. Always use tools when needed.`
+      content: `You are SolSecure AI Agent. You can help users create and manage projects. When a user wants to create a project, you should use the create_project tool with the name and description from their message. Always use tools when needed.`
     }
 
     // Convert user messages to the correct type
@@ -88,8 +92,28 @@ router.post('/agent', async (req: Request<{}, {}, ChatRequestBody>, res: Respons
 
 router.post('/chat', async (req: Request<{}, {}, ProjectRequestBody>, res: Response) => {
   try {
-    const { message } = req.body;
+    const { message, name, description, environments, creatorId } = req.body;
 
+    // If it's a direct project creation request
+    if (name && creatorId) {
+      const project = {
+        id: Date.now().toString(),
+        name: name,
+        description: description || '',
+        environments: environments?.length || 1,
+        members: 1,
+        status: "active" as const,
+        updatedAt: new Date().toLocaleDateString()
+      };
+
+      return res.json({
+        success: true,
+        message: `Project "${project.name}" created successfully`,
+        project
+      });
+    }
+
+    // If it's a message-based request
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
@@ -97,19 +121,22 @@ router.post('/chat', async (req: Request<{}, {}, ProjectRequestBody>, res: Respo
     // Extract project details from the message
     const projectDetails = await extractProjectDetails(message);
     
-    // Create a simple project object
+    // Create a project object that matches the frontend's expected format
     const project = {
-      id: Date.now().toString(), // Simple ID generation
+      id: Date.now().toString(),
       name: projectDetails.name,
       description: projectDetails.description,
       environments: 1,
       members: 1,
-      status: "active",
-      updatedAt: new Date().toISOString()
+      status: "active" as const,
+      updatedAt: new Date().toLocaleDateString()
     };
 
-    // Return the created project
-    return res.json(project);
+    return res.json({
+      success: true,
+      message: `Project "${project.name}" created successfully`,
+      project
+    });
   } catch (error: unknown) {
     console.error('Error in chat endpoint:', error);
     return res.status(500).json({ 
@@ -152,5 +179,47 @@ async function extractProjectDetails(message: string) {
     throw new Error('Failed to parse project details');
   }
 }
+
+// Add POST endpoint for projects
+router.post('/projects', async (req: Request<{}, {}, ProjectRequestBody>, res: Response) => {
+  try {
+    const { name, description, environments, creatorId } = req.body;
+
+    if (!name || !creatorId) {
+      return res.status(400).json({ error: 'Name and creatorId are required' });
+    }
+
+    const project = {
+      id: Date.now().toString(),
+      name: name,
+      description: description || '',
+      environments: environments?.length || 1,
+      members: 1,
+      status: "active" as const,
+      updatedAt: new Date().toLocaleDateString()
+    };
+
+    return res.json(project);
+  } catch (error: unknown) {
+    console.error('Error creating project:', error);
+    return res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'An unknown error occurred' 
+    });
+  }
+});
+
+// Add GET endpoint for projects
+router.get('/projects', async (req: Request, res: Response) => {
+  try {
+    // For now, return an empty array since we're not persisting projects
+    // This will be updated when we add database integration
+    return res.json([]);
+  } catch (error: unknown) {
+    console.error('Error fetching projects:', error);
+    return res.status(500).json({ 
+      error: error instanceof Error ? error.message : 'An unknown error occurred' 
+    });
+  }
+});
 
 export const agentRouter = router;

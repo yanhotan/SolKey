@@ -1,5 +1,4 @@
 import crypto from 'crypto'
-import { createProject } from '../db/projects'
 
 type AuditEntry = { action: string; name?: string; user?: string; timestamp: Date }
 
@@ -11,12 +10,15 @@ let emergencyLocked = false
 export const toolFunctions = {
   create_project: async ({ name, description }: { name: string; description: string }) => {
     try {
-      const project = await createProject({
+      const project = {
+        id: Date.now().toString(),
         name,
         description,
         environments: ['dev', 'prod'],
-        creatorId: process.env.DEFAULT_CREATOR_ID || 'default-creator-id'
-      })
+        members: 1,
+        status: "active" as const,
+        updatedAt: new Date().toLocaleDateString()
+      }
       
       auditLog.push({ 
         action: 'create_project', 
@@ -29,9 +31,9 @@ export const toolFunctions = {
         message: `Project "${name}" created successfully`,
         project
       })
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error creating project:', error)
-      throw new Error(`Failed to create project: ${error.message}`)
+      throw new Error(`Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   },
 

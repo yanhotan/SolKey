@@ -117,4 +117,19 @@ export const tools = [
       parameters: { type: 'object', properties: {}, required: [] },
     },
   },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'create_project',
+      description: 'Create a new project with the given name and description',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'The name of the project' },
+          description: { type: 'string', description: 'The description of the project' }
+        },
+        required: ['name', 'description'],
+      },
+    },
+  },
 ]

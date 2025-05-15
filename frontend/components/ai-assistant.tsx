@@ -101,9 +101,19 @@ export function AIAssistant() {
               creatorId: 'default-creator-id'
             }),
           })
-          if (!res.ok) throw new Error(await res.text())
-          const data = await res.json()
-          const text = data.output ?? `✅ ${data.tool}: ${data.output}`
+          
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error('Server error:', errorText);
+            throw new Error('Failed to create project');
+          }
+
+          const data = await res.json();
+          if (!data || typeof data !== 'object') {
+            throw new Error('Invalid response from server');
+          }
+
+          const text = data.output ?? `✅ ${data.tool}: ${data.output}`;
           setMessages((prev) => [
             ...prev,
             {
@@ -112,8 +122,9 @@ export function AIAssistant() {
               sender: "assistant",
               timestamp: new Date(),
             },
-          ])
+          ]);
         } catch (err) {
+          console.error('Error creating project:', err);
           setMessages((prev) => [
             ...prev,
             {
@@ -122,13 +133,13 @@ export function AIAssistant() {
               sender: "assistant",
               timestamp: new Date(),
             },
-          ])
+          ]);
         } finally {
-          setIsTyping(false)
-          setIsCreatingProject(false)
-          setPendingProjectName(null)
-          setPendingProjectDescription(null)
-          setInput("")
+          setIsTyping(false);
+          setIsCreatingProject(false);
+          setPendingProjectName(null);
+          setPendingProjectDescription(null);
+          setInput("");
         }
         return
       }
