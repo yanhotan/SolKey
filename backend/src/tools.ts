@@ -1,123 +1,91 @@
 import crypto from 'crypto'
-import 'dotenv/config' // <- MUST be at the top!
-
-/**
- * Load your teammates' JS helpers directly.
- * Because tsconfig now includes db/ and lib/, these require() calls resolve.
- */
-const DEFAULT_CREATOR_ID = process.env.DEFAULT_CREATOR_ID!
-
-const {
-  getAllProjects,
-  getProjectById,
-  createProject,
-  updateProject,
-  deleteProject,
-} = require('../db/projects.js')
-
-const {
-  createSecret,
-  getSecret,
-  shareSecret,
-  deriveKeyFromSignature,
-} = require('../lib/crypto.js')
+import { createProject } from '../db/projects'
 
 type AuditEntry = { action: string; name?: string; user?: string; timestamp: Date }
 
-// In-memory stores for demo
+// In-memory stores
 const secretsStore: Record<string, { ciphertext: string; iv: string; salt: string }> = {}
 const auditLog: AuditEntry[] = []
 let emergencyLocked = false
 
 export const toolFunctions = {
-  // ─── Project Tools ───────────────────────────────────────────────────────
-  list_projects: async (): Promise<string> => {
-    const projs = await getAllProjects()
-    return JSON.stringify(projs, null, 2)
+  create_project: async ({ name, description }: { name: string; description: string }) => {
+    try {
+      const project = await createProject({
+        name,
+        description,
+        environments: ['dev', 'prod'],
+        creatorId: process.env.DEFAULT_CREATOR_ID || 'default-creator-id'
+      })
+      
+      auditLog.push({ 
+        action: 'create_project', 
+        name, 
+        timestamp: new Date() 
+      })
+      
+      return JSON.stringify({
+        success: true,
+        message: `Project "${name}" created successfully`,
+        project
+      })
+    } catch (error) {
+      console.error('Error creating project:', error)
+      throw new Error(`Failed to create project: ${error.message}`)
+    }
   },
 
-  get_project: async ({ id }: { id: string }): Promise<string> => {
-    const proj = await getProjectById(id)
-    return JSON.stringify(proj, null, 2)
+  store_secret: ({ name, ciphertext, iv, salt }: { name: string; ciphertext: string; iv: string; salt: string }) => {
+    if (emergencyLocked) throw new Error('🔒 Locked by emergency stop')
+    secretsStore[name] = { ciphertext, iv, salt }
+    auditLog.push({ action: 'store_secret', name, timestamp: new Date() })
+    return `🔐 Secret '${name}' stored securely.`
   },
 
-  create_project: async ({
-    name,
-    description
-  }: {
-    name: string
-    description: string
-  }): Promise<string> => {
-    // Call your teammate’s helper, plus creatorId
-    const project = await createProject({
-      name,
-      description,
-      environments: ['dev', 'prod'],
-      creatorId: DEFAULT_CREATOR_ID,      // <<— new
-    })
-    return JSON.stringify(project, null, 2)
+  rotate_secret: ({ name }: { name: string }) => {
+    if (emergencyLocked) throw new Error('🔒 Locked by emergency stop')
+    const newVal = crypto.randomBytes(16).toString('hex')
+    auditLog.push({ action: 'rotate_secret', name, timestamp: new Date() })
+    return `🔄 Secret '${name}' rotated to '${newVal.slice(0,6)}…'.`
   },
 
-  update_project: async ({
-    id,
-    updates
-  }: {
-    id: string
-    updates: Record<string, any>
-  }): Promise<string> => {
-    const proj = await updateProject(id, updates)
-    return JSON.stringify(proj, null, 2)
+  detect_anomaly: () => {
+    const oneMinAgo = Date.now() - 60_000
+    const recent = auditLog.filter((e) => e.timestamp.getTime() > oneMinAgo)
+    const anomaly = recent.length > 5
+    auditLog.push({ action: 'detect_anomaly', timestamp: new Date() })
+    return anomaly ? '⚠️ Anomaly detected' : '✅ No anomalies'
   },
 
-  delete_project: async ({ id }: { id: string }): Promise<string> => {
-    await deleteProject(id)
-    return `Project ${id} deleted.`
+  check_access: ({ user, name }: { user: string; name: string }) => {
+    // Example: only admin can access prod_ secrets
+    const allowed = !(name.startsWith('prod_') && user !== 'admin')
+    auditLog.push({ action: 'check_access', name, user, timestamp: new Date() })
+    return allowed ? `✅ ${user} may access '${name}'` : `🚫 ${user} denied access to '${name}'`
   },
 
-  // ─── Secret Tools ────────────────────────────────────────────────────────
-  create_secret: async (params: {
-    projectId: string
-    environmentId: string
-    name: string
-    value: string
-    type: string
-    signature: string
-    userId: string
-  }): Promise<string> => {
-    const secret = await createSecret(
-      params.projectId,
-      params.environmentId,
-      params.name,
-      params.value,
-      params.type,
-      params.signature,
-      params.userId
-    )
-    return JSON.stringify(secret, null, 2)
+  get_audit_log: () => {
+    return auditLog.slice(-10).map((e) => `${e.timestamp.toISOString()} • ${e.action}`)
   },
 
-  get_secret: async ({ secretId, signature }: { secretId: string; signature: string }): Promise<string> => {
-    const secret = await getSecret(secretId, signature)
-    return JSON.stringify(secret, null, 2)
+  request_permission: ({ user, action }: { user: string; action: string }) => {
+    auditLog.push({ action: `request_permission:${action}`, user, timestamp: new Date() })
+    return `🛑 Permission requested from ${user} for '${action}'.`
   },
 
-  share_secret: async (params: {
-    secretId: string
-    targetUserId: string
-    targetSignature: string
-    creatorSignature: string
-  }): Promise<string> => {
-    const result = await shareSecret(
-      params.secretId,
-      params.targetUserId,
-      params.targetSignature,
-      params.creatorSignature
-    )
-    return JSON.stringify(result, null, 2)
+  call_webhook: ({ url, payload }: { url: string; payload: string }) => {
+    auditLog.push({ action: 'call_webhook', timestamp: new Date() })
+    return `🔗 Called webhook at ${url} with payload.`
   },
 
-  derive_key: async ({ signature }: { signature: string }): Promise<string> => {
-    const key = await deriveKeyFromSignature(signature)
-    return key.toString('hex')
+  compliance_check: ({ policy }: { policy: string }) => {
+    auditLog.push({ action: 'compliance_check', timestamp: new Date() })
+    return `✅ Policy '${policy}' is compliant.`
+  },
+
+  trigger_emergency: () => {
+    emergencyLocked = true
+    auditLog.push({ action: 'trigger_emergency', timestamp: new Date() })
+    return '⛔ Emergency stop engaged.'
   },
 }

@@ -19,7 +19,7 @@ export function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      content: "Hello! I'm your SolSecure AI assistant. How can I help you today?",
+      content: "Hello! I'm your SolSecure AI assistant. How can I help you today",
       sender: "assistant",
       timestamp: new Date(),
     },
@@ -29,17 +29,136 @@ export function AIAssistant() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL
 
+  // Add state for create project flow
+  const [isCreatingProject, setIsCreatingProject] = useState(false)
+  const [pendingProjectName, setPendingProjectName] = useState<string | null>(null)
+  const [pendingProjectDescription, setPendingProjectDescription] = useState<string | null>(null)
+
   // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
+  // Helper: detect create project intent
+  function isCreateProjectIntent(text: string) {
+    return /^(create|add|new) project(\s|$)/i.test(text.trim())
+  }
+
   // ─── handleSendMessage ────────────────────────────────────────────────────
-  // Fires when user clicks “Send” or presses Enter
+  // Fires when user clicks "Send" or presses Enter
   const handleSendMessage = async () => {
     if (!input.trim() || !BACKEND) return
 
-    // 1. Add the user’s message to chat
+    // ─── CREATE PROJECT FLOW ───────────────────────────────────────────────
+    if (isCreatingProject) {
+      // If waiting for name
+      if (!pendingProjectName) {
+        setPendingProjectName(input.trim())
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            content: input,
+            sender: "user",
+            timestamp: new Date(),
+          },
+          {
+            id: (Date.now() + 1).toString(),
+            content: "Please provide a short description for your project.",
+            sender: "assistant",
+            timestamp: new Date(),
+          },
+        ])
+        setInput("")
+        return
+      }
+      // If waiting for description
+      if (!pendingProjectDescription) {
+        setPendingProjectDescription(input.trim())
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            content: input,
+            sender: "user",
+            timestamp: new Date(),
+          },
+        ])
+        setIsTyping(true)
+        // Now send to backend
+        try {
+          const res = await fetch(`${BACKEND}/api/agent`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: [
+                { 
+                  role: "user", 
+                  content: `Create a project named '${pendingProjectName}' with description '${input.trim()}'` 
+                }
+              ],
+              environments: ['dev', 'prod'],
+              creatorId: 'default-creator-id'
+            }),
+          })
+          if (!res.ok) throw new Error(await res.text())
+          const data = await res.json()
+          const text = data.output ?? `✅ ${data.tool}: ${data.output}`
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: (Date.now() + 2).toString(),
+              content: text,
+              sender: "assistant",
+              timestamp: new Date(),
+            },
+          ])
+        } catch (err) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: (Date.now() + 2).toString(),
+              content: "⚠️ Error creating project. Please try again.",
+              sender: "assistant",
+              timestamp: new Date(),
+            },
+          ])
+        } finally {
+          setIsTyping(false)
+          setIsCreatingProject(false)
+          setPendingProjectName(null)
+          setPendingProjectDescription(null)
+          setInput("")
+        }
+        return
+      }
+    }
+
+    // ─── Detect create project intent ──────────────────────────────────────
+    if (isCreateProjectIntent(input)) {
+      setIsCreatingProject(true)
+      setPendingProjectName(null)
+      setPendingProjectDescription(null)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          content: input,
+          sender: "user",
+          timestamp: new Date(),
+        },
+        {
+          id: (Date.now() + 1).toString(),
+          content: "What would you like to name your new project?",
+          sender: "assistant",
+          timestamp: new Date(),
+        },
+      ])
+      setInput("")
+      return
+    }
+
+    // 1. Add the user's message to chat
     const userMessage: Message = {
       id: Date.now().toString(),
       content: input,
@@ -68,7 +187,7 @@ export function AIAssistant() {
       }
       const data = await res.json()
 
-      // 3. Add assistant’s reply
+      // 3. Add assistant's reply
       const text = data.output ?? `✅ ${data.tool}: ${data.output}`
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -94,7 +213,7 @@ export function AIAssistant() {
   }
 
   // ─── handleTestAction ─────────────────────────────────────────────────────
-  // Fires when a “Test: …” button is clicked
+  // Fires when a "Test: …" button is clicked
   const handleTestAction = async (label: string) => {
     // Reuse handleSendMessage logic: just send the label as the prompt
     setInput("")             // clear input

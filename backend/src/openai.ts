@@ -116,19 +116,5 @@ export const tools = [
       description: 'Emergency stop: lock all operations',
       parameters: { type: 'object', properties: {}, required: [] },
     },
-  },{
-    type: 'function' as const,
-    function: {
-      name: 'create_project',
-      description: 'Create a new project and automatically provision dev and prod environments',
-      parameters: {
-        type: 'object',
-        properties: {
-          name:        { type: 'string', description: 'The project name' },
-          description: { type: 'string', description: 'A short project description' }
-        },
-        required: ['name','description']
-      }
-    }
   },
 ]
