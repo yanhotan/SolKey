@@ -119,6 +119,7 @@ export function SecretsTable({ environment, searchQuery }: { environment: string
   }
 
   return (
+    
     <div className="rounded-md border">
       <Table>
         <TableHeader>
@@ -131,86 +132,161 @@ export function SecretsTable({ environment, searchQuery }: { environment: string
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredSecrets.map((secret) => (
-            <TableRow key={secret.id}>
-              <TableCell className="font-medium">{secret.key}</TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <div className="font-mono text-sm">
-                    {visibleSecrets[secret.id] ? (
-                      secret.value
-                    ) : (
-                      <span className="text-muted-foreground">••••••••••••••••••••••••••</span>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => toggleSecretVisibility(secret.id)}
-                  >
-                    {visibleSecrets[secret.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span className="sr-only">
-                      {visibleSecrets[secret.id] ? "Hide" : "Show"} {secret.key}
-                    </span>
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyToClipboard(secret.value)}>
-                    <Copy className="h-4 w-4" />
-                    <span className="sr-only">Copy {secret.key}</span>
-                  </Button>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={5} className="h-24 text-center">
+                <div className="flex flex-col items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="mt-2 text-sm text-muted-foreground">Loading secrets...</p>
                 </div>
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant="outline"
-                  className={
-                    secret.type === "string"
-                      ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
-                      : secret.type === "number"
-                        ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
-                        : secret.type === "boolean"
-                          ? "bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400"
-                          : secret.type === "json"
-                            ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400"
-                            : "bg-gray-50 text-gray-700 dark:bg-gray-950/30 dark:text-gray-400"
-                  }
-                >
-                  {secret.type}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Clock className="h-3 w-3" />
-                  <span>{secret.updatedAt}</span>
-                </div>
-                <div className="text-xs text-muted-foreground">by {secret.updatedBy}</div>
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">More options</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => copyToClipboard(secret.key)}>Copy key</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => copyToClipboard(secret.value)}>Copy value</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => copyToClipboard(`${secret.key}=${secret.value}`)}>
-                      Copy as .env
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>Edit secret</DropdownMenuItem>
-                    <DropdownMenuItem>View history</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive">Delete secret</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </TableCell>
             </TableRow>
-          ))}
-          {filteredSecrets.length === 0 && (
+          ) : filteredSecrets.length > 0 ? (
+            filteredSecrets.map((secret) => (
+              <TableRow key={secret.id}>
+                <TableCell className="font-medium">{secret.name}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">                    
+                    <div className="font-mono text-sm">                      
+                      <span className={
+                        secret.type === "number" ? "text-green-600 dark:text-green-400" :
+                        secret.type === "boolean" ? "text-amber-600 dark:text-amber-400" :
+                        secret.type === "json" ? "text-purple-600 dark:text-purple-400" :
+                        secret.type === "reference" ? "text-blue-600 dark:text-blue-400" :
+                        ""
+                      }>
+                        {visibleSecrets[secret.id] ? 
+                          (secret.decryptedValue || "Decryption failed") : 
+                          "******************"
+                        }
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => toggleSecretVisibility(secret)}
+                      disabled={decryptingSecrets[secret.id]}
+                    >
+                      {decryptingSecrets[secret.id] ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : visibleSecrets[secret.id] ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                      <span className="sr-only">
+                        {visibleSecrets[secret.id] ? "Hide" : "Show"} {secret.name}
+                      </span>
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={() => {
+                        // Copy content with proper feedback
+                        const valueToCopy = visibleSecrets[secret.id] && secret.decryptedValue 
+                          ? secret.decryptedValue 
+                          : secret.value;
+                        
+                        // Show different message based on whether decrypted or encrypted value is copied
+                        copyToClipboard(valueToCopy);
+                        
+                        if (visibleSecrets[secret.id] && secret.decryptedValue) {
+                          toast({
+                            title: "Decrypted Value Copied",
+                            description: `The decrypted value for ${secret.name} has been copied to clipboard.`
+                          });
+                        } else {
+                          toast({
+                            title: "Encrypted Value Copied",
+                            description: `Note: This is the encrypted value. Reveal the secret first to copy the actual value.`
+                          });
+                        }
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                      <span className="sr-only">Copy {secret.name}</span>
+                    </Button>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant="outline"
+                    className={
+                      secret.type === "string"
+                        ? "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
+                        : secret.type === "number"
+                          ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                          : secret.type === "boolean"
+                            ? "bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400"
+                            : secret.type === "json"
+                              ? "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400"
+                              : "bg-gray-50 text-gray-700 dark:bg-gray-950/30 dark:text-gray-400"
+                    }
+                  >
+                    {secret.type || "string"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    <span>{new Date(secret.updatedAt).toLocaleString()}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">by {secret.updatedBy || "system"}</div>
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">More options</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => copyToClipboard(secret.name)}>Copy name</DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => {
+                          if (visibleSecrets[secret.id] && secret.decryptedValue) {
+                            copyToClipboard(secret.decryptedValue);
+                          } else {
+                            toast({
+                              title: "Cannot Copy",
+                              description: "Reveal the secret first to copy its value",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                      >
+                        Copy value
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => {
+                          if (visibleSecrets[secret.id] && secret.decryptedValue) {
+                            copyToClipboard(`${secret.name}=${secret.decryptedValue}`);
+                          } else {
+                            toast({
+                              title: "Cannot Copy",
+                              description: "Reveal the secret first to copy as .env format",
+                              variant: "destructive"
+                            });
+                          }
+                        }}
+                      >
+                        Copy as .env
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>Edit secret</DropdownMenuItem>
+                      <DropdownMenuItem>View history</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive">Delete secret</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
             <TableRow>
               <TableCell colSpan={5} className="h-24 text-center">
                 <div className="text-center">

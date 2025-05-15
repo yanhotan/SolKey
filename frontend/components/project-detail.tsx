@@ -192,7 +192,7 @@ useEffect(() => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1">
           {environments.map((env) => (
             <div key={env} className="relative group">
               <Button
@@ -201,9 +201,7 @@ useEffect(() => {
                 onClick={() => setCurrentEnvironment(env)}
               >
                 {env}
-                <Badge variant="outline" className="ml-2 bg-background">
-                  {project.secrets[env]?.configs || 0}
-                </Badge>
+                
               </Button>
               {environments.length > 1 && env !== "production" && (
                 <Button
@@ -316,14 +314,25 @@ useEffect(() => {
               </CardContent>
             </Card>
           ))}
-          <Button variant="outline" className="flex h-16 items-center justify-center border-dashed">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Config
-          </Button>
+          
         </div>
-
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm">
+        
+       
+        
+        {showEditor ? (
+          <div className="mt-4">
+            {/* Editor placeholder */}
+          </div>
+        ) : (
+          <div className="mt-4">
+            <h3 className="mb-4 font-medium">Project Secrets</h3>
+             <div className="flex flex-wrap gap-3">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleRevealSecrets}
+            disabled={!connected}
+          >
             <Eye className="mr-2 h-4 w-4" />
             Reveal All
           </Button>
@@ -348,15 +357,17 @@ useEffect(() => {
             Delete All
           </Button>
         </div>
-
-        {/* {showEditor ? (
-          <SecretsEditor environment={currentEnvironment} />
-        ) : (
-          <div className="mt-4">
-            <h3 className="mb-4 font-medium">Active Secrets ({currentEnvironment})</h3>
-            <SecretsTable environment={currentEnvironment} searchQuery={searchQuery} />
+        
+         <div className="mt-6">
+            <SecretsTable 
+              projectId={id} 
+              environment={currentEnvironment} 
+              searchQuery={searchQuery} 
+            />
           </div>
-        )} */}
+
+          </div>
+        )}
       </div>
     </div>
   )
