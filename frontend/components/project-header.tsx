@@ -6,8 +6,27 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, GitBranch, Users, Calendar } from "lucide-react"
 
+interface Project {
+  id: string
+  name: string
+  description: string
+  environments: number
+  members: number
+  updatedAt: string
+  status: "active" | "inactive"
+}
 
-export function ProjectHeader({ project }: { project: any }) {
+export function ProjectHeader({ id }: { id: string }) {
+  // Sample project data - matches the mock data in projects-list
+  const project = {
+    id,
+    name: "Backend API",
+    description: "Main backend API service with authentication and core services",
+    environments: 3,
+    members: 5,
+    updatedAt: "2 hours ago",
+    status: "active",
+  }
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -26,15 +45,15 @@ export function ProjectHeader({ project }: { project: any }) {
         <div className="flex flex-wrap gap-4 pt-1 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <GitBranch className="h-4 w-4" />
-            <span>{project.environments?.length ?? 0} environment{project.environments !== 1 ? 's' : ''}</span>
+            <span>{project.environments} environment{project.environments !== 1 ? 's' : ''}</span>
           </div>
           <div className="flex items-center gap-1">
             <Users className="h-4 w-4" />
-            <span>{project.project_members?.length ?? 0} team member{project.members !== 1 ? 's' : ''}</span>
+            <span>{project.members} team member{project.members !== 1 ? 's' : ''}</span>
           </div>
           <div className="flex items-center gap-1">
             <Calendar className="h-4 w-4" />
-            <span>Updated {project.updated_at}</span>
+            <span>Updated {project.updatedAt}</span>
           </div>
         </div>
       </div>

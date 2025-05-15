@@ -1,61 +1,61 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { useRouter } from "next/navigation";
-import { useWalletAuthSkip } from "@/hooks/use-wallet-auth-skip";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Shield, Check, Wallet, Eye } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import "@solana/wallet-adapter-react-ui/styles.css";
+import { useState, useEffect } from "react"
+import { useWallet } from "@solana/wallet-adapter-react"
+import { useRouter } from "next/navigation"
+import { useWalletAuthSkip } from "@/hooks/use-wallet-auth-skip"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle, Shield, Check, Wallet, Eye } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui"
+import "@solana/wallet-adapter-react-ui/styles.css"
 
 interface WalletAuthGateProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 export function WalletAuthGate({ children }: WalletAuthGateProps) {
-  const wallet = useWallet();
-  const { connected, publicKey } = wallet;
-  const { hasSkipped, skip } = useWalletAuthSkip();
-  const [initializationError, setInitializationError] = useState<string | null>(null);
-  const [isFirstVisit, setIsFirstVisit] = useState<boolean>(true); // Track first visit
-  const router = useRouter();
-
-  // Store wallet address in localStorage when connected
+  const wallet = useWallet()
+  const { connected } = wallet
+  const { isInitialized, handleSignMessage, error } = useWalletEncryption()
+  const [initializationError, setInitializationError] = useState<string | null>(null)  
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [isSigning, setIsSigning] = useState(false)
+  const [hasSkipped, setHasSkipped] = useState(false)
+  const router = useRouter()  // Clear any initialization errors when wallet connection state changes
   useEffect(() => {
-    if (connected && publicKey) {
-      localStorage.setItem("solkey:walletAddress", publicKey.toBase58());
-      setInitializationError(null);
-    } else if (!connected) {
-      // Clear wallet address when disconnected
-      localStorage.removeItem("solkey:walletAddress");
+    if (connected) {
+      setInitializationError(null)
     }
-  }, [connected, publicKey]);
+  }, [connected])
 
-  // Check if this is the user's first visit
-  useEffect(() => {
-    const firstVisit = localStorage.getItem("solkey:firstVisit");
-    if (firstVisit === "false") {
-      setIsFirstVisit(false);
+  const signMessage = async () => {
+    try {
+      setIsSigning(true)
+      await handleSignMessage()
+    } catch (err) {
+      console.error('Failed to sign message:', err)
+      // Handle user rejection vs other errors
+      const errorMessage = err instanceof Error
+        ? err.message.includes('User rejected') 
+          ? 'Message signing was cancelled'
+          : 'Failed to sign message. Please try again.'
+        : 'Failed to sign message. Please try again.'
+      setInitializationError(errorMessage)
+    } finally {
+      setIsSigning(false)
     }
-  }, []);
-
-  const handleFirstVisitComplete = () => {
-    localStorage.setItem("solkey:firstVisit", "false");
-    setIsFirstVisit(false);
-  };
-
+  }
   const skipAuthentication = () => {
-    skip(); // Use the `skip` function from `useWalletAuthSkip`
-    handleFirstVisitComplete();
-    router.push("/dashboard");
-  };
+    setHasSkipped(true)
+    router.push('/dashboard')
+  }
 
-  // If already initialized, user has skipped, or it's not the first visit, show children
-  if (connected || hasSkipped || !isFirstVisit) {
-    return <>{children}</>;
+  // If already initialized or user has skipped, show children
+  if (isInitialized || hasSkipped) {
+    return <>{children}</>
   }
 
   return (
@@ -66,7 +66,7 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
             Wallet Authentication
           </CardTitle>
           <CardDescription>
-            Connect your Solana wallet to securely access your encrypted secrets or skip to preview the app.
+            Connect your Solana wallet and sign a message to securely access your encrypted secrets
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
@@ -79,11 +79,11 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
             </AlertDescription>
           </Alert>
 
-          {(initializationError) && (
+          {(error || initializationError) && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{initializationError}</AlertDescription>
+              <AlertDescription>{error || initializationError}</AlertDescription>
             </Alert>
           )}
 
@@ -100,9 +100,8 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
                 <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full border border-green-100 dark:border-green-800/30">
                   <Check className="h-4 w-4 text-green-500" />
                   <span className="text-xs font-medium text-green-600 dark:text-green-400">Connected</span>
-                </div>
-              ) : (
-                <WalletMultiButton
+                </div>              ) : (
+                <WalletMultiButton 
                   className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 !h-9 px-4"
                 />
               )}
@@ -116,10 +115,22 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
               </div>
               <div className="flex-1">
                 <h3 className="font-medium">Step 2: Sign Message</h3>
-                <p className="text-sm text-muted-foreground">
-                  Signing a message is required when decrypting your secrets.
-                </p>
+                <p className="text-sm text-muted-foreground">Sign a message to derive your encryption key</p>
               </div>
+              {isInitialized ? (
+                <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full border border-green-100 dark:border-green-800/30">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span className="text-xs font-medium text-green-600 dark:text-green-400">Signed</span>
+                </div>
+              ) : (
+                <Button
+                  onClick={signMessage}
+                  disabled={!connected || isSigning}
+                  className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+                >
+                  {isSigning ? "Signing..." : "Sign"}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -145,5 +156,7 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
         </CardFooter>
       </Card>
     </div>
-  );
+  )
+
+  return <>{children}</>
 }

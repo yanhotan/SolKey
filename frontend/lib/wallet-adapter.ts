@@ -16,7 +16,7 @@ export const WALLET_CONFIG = {
   network,
   endpoint: clusterApiUrl(network),
   wallets,
-  signatureMessage: 'auth-to-decrypt',
+  signatureMessage: 'Sign this message to secure your secrets with your Solana wallet.',
   persistenceKey: 'solkey_encryption_data'
 } as const;
 

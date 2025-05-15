@@ -11,10 +11,9 @@ const {
   deleteProject,
   addProjectMember,
 } = require("../db/projects");
-const { supabase } = require("../lib/supabase");
 
 // Initialize Supabase client
-const supabaseClient = createClient(
+const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
@@ -22,49 +21,10 @@ const supabaseClient = createClient(
 // Get all projects
 router.get("/", async (req, res) => {
   try {
-    const { walletAddress } = req.query;
-    
-    // Build the query based on wallet address parameter
-    let query = supabase
-      .from("projects")
-      .select("id, name, description, status");
-      
-    // If wallet address is provided, filter projects by user membership
-    if (walletAddress) {
-      // Join with project_members to get only projects associated with this wallet
-      query = supabase
-        .from("projects")
-        .select(`
-          id, 
-          name, 
-          description, 
-          status,
-          project_members!inner(wallet_address)
-        `)
-        .eq("project_members.wallet_address", walletAddress);
-    }
-    
-    // Execute the query
-    const { data: projects, error } = await query.order("name", { ascending: true });
-
-    if (error) {
-      throw error;
-    }
-    
-    // Format for frontend
-    const formattedProjects = projects.map(project => ({
-      id: project.id,
-      name: project.name,
-      description: project.description || '',
-      status: project.status
-    }));
-
-    // Format for frontend as expected
-    res.json({ 
-      projects: formattedProjects
-    });
+    const { userId } = req.query;
+    const projects = await getAllProjects(userId);
+    res.json(projects);
   } catch (error) {
-    console.error("Error fetching projects:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -89,20 +49,15 @@ router.get("/:id", async (req, res) => {
         `
         *,
         environments (*),
-        project_members (*), 
-        secrets (*)
+        project_members (*)
       `
       )
       .eq("id", req.params.id)
       .single();
 
-    if (error) {
-      throw error;
-    }
-
+    if (error) throw error;
     res.json(project);
   } catch (error) {
-    console.error("Error fetching project:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -175,7 +130,6 @@ router.post("/", async (req, res) => {
 
     res.status(201).json(completeProject);
   } catch (error) {
-    console.error("Error creating project:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -183,13 +137,7 @@ router.post("/", async (req, res) => {
 // Update a project
 router.put("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
     const { name, description, status } = req.body;
-    
-    if (!name) {
-      return res.status(400).json({ error: "Project name is required" });
-    }
-
     const { data: project, error } = await supabase
       .from("projects")
       .update({
@@ -198,17 +146,13 @@ router.put("/:id", async (req, res) => {
         status,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", id)
+      .eq("id", req.params.id)
       .select()
       .single();
 
-    if (error) {
-      throw error;
-    }
-
+    if (error) throw error;
     res.json(project);
   } catch (error) {
-    console.error("Error updating project:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -216,19 +160,14 @@ router.put("/:id", async (req, res) => {
 // Delete a project
 router.delete("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
     const { error } = await supabase
       .from("projects")
       .delete()
-      .eq("id", id);
+      .eq("id", req.params.id);
 
-    if (error) {
-      throw error;
-    }
-
+    if (error) throw error;
     res.status(204).send();
   } catch (error) {
-    console.error("Error deleting project:", error);
     res.status(500).json({ error: error.message });
   }
 });

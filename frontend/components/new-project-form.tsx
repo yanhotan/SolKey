@@ -12,9 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/hooks/use-toast"
 import { saveProject } from "@/lib/local-storage"
 import { useWallet } from "@solana/wallet-adapter-react"
-// import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
-// import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
-// import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
+import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
 
 export function NewProjectForm() {
   const [projectName, setProjectName] = useState("")
@@ -27,20 +25,21 @@ export function NewProjectForm() {
   })
   const router = useRouter()
   const { connected } = useWallet()
-  // const { isInitialized, handleSignMessage } = useWalletEncryption()
+  const { isInitialized, handleSignMessage } = useWalletEncryption()
 
-  // useEffect(() => {
-  //   if (connected && !isInitialized && !isLoading) {
-  //     handleSignMessage().catch((err: unknown) => {
-  //       console.error('Failed to initialize wallet encryption:', err);
-  //       toast({
-  //         title: "Wallet Error",
-  //         description: err instanceof Error ? err.message : 'Failed to initialize encryption',
-  //         variant: "destructive",
-  //       });
-  //     });
-  //   }
-  // }, [connected, isInitialized, handleSignMessage, isLoading]);
+  // Automatically initialize encryption when wallet is connected
+  useEffect(() => {
+    if (connected && !isInitialized && !isLoading) {
+      handleSignMessage().catch((err: unknown) => {
+        console.error('Failed to initialize wallet encryption:', err);
+        toast({
+          title: "Wallet Error",
+          description: err instanceof Error ? err.message : 'Failed to initialize encryption',
+          variant: "destructive",
+        });
+      });
+    }
+  }, [connected, isInitialized, handleSignMessage, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,20 +50,16 @@ export function NewProjectForm() {
         throw new Error('Please connect your wallet first');
       }
 
-      // if (!isInitialized) {
-      //   // Try to initialize encryption
-      //   await handleSignMessage();
-      // }
-      // if (!isInitialized) {
-      //   // Try to initialize encryption
-      //   await handleSignMessage();
-      // }
+      if (!isInitialized) {
+        // Try to initialize encryption
+        await handleSignMessage();
+      }
 
       // Get the encryption key
-      // const encryptionKey = localStorage.getItem('solkey_encryption_key');
-      // if (!encryptionKey) {
-      //   throw new Error('Failed to generate encryption key. Please try again.');
-      // }
+      const encryptionKey = localStorage.getItem('solkey_encryption_key');
+      if (!encryptionKey) {
+        throw new Error('Failed to generate encryption key. Please try again.');
+      }
 
       // Generate project ID and data
       const projectSlug = projectName
@@ -87,7 +82,7 @@ export function NewProjectForm() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         status: 'active' as const,
-        // encryptionKey: encryptionKey // Store encryption key with project
+        encryptionKey: encryptionKey // Store encryption key with project
       };
 
       // Save to localStorage
@@ -96,38 +91,13 @@ export function NewProjectForm() {
         throw new Error('Failed to save project');
       }
 
-      
-    const response = await fetch("http://localhost:3002/api/projects", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: projectName.trim(),
-        description: projectDescription.trim(),
-        environments: selectedEnvironments,
-        creatorId:"2d48f326-c9fd-47d8-85f6-0b21e5af3992",
-      }),
-    });
-
-    if (!response.ok) {
-      const { error } = await response.json();
-      throw new Error(error || "Failed to create project");
-    }
-
-    const project = await response.json();
-    toast({
-      title: "Project created",
-      description: `${project.name} has been created successfully.`,
-    });
-    
       toast({
         title: "Project created",
         description: `${projectName} has been created successfully.`,
       });
 
       // Navigate to the new project
-      router.push(`/dashboard/projects/${project.id}`);
+      router.push(`/dashboard/projects/${projectId}`);
     } catch (error) {
       console.error('Error creating project:', error);
       toast({
@@ -226,12 +196,11 @@ export function NewProjectForm() {
           </Button>
           <Button 
             type="submit" 
-            disabled={isLoading || !projectName.trim() || !connected }          >
+            disabled={isLoading || !projectName.trim() || !connected || !isInitialized}
+          >
             {isLoading ? "Creating Project..." : 
              !connected ? "Connect Wallet to Create" :
-            //  !isInitialized ? "Initialize Encryption" :
-            //  !isInitialized ? "Initialize Encryption" :
-            //  !isInitialized ? "Initialize Encryption" :
+             !isInitialized ? "Initialize Encryption" :
              "Create Project"}
           </Button>
         </CardFooter>

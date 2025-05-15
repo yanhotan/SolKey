@@ -1,7 +1,6 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { supabase } = require("./lib/supabase");
 const {
   getAllProjects,
   getProjectById,
@@ -9,6 +8,7 @@ const {
   updateProject,
   deleteProject,
 } = require("./db/projects");
+const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
 const port = process.env.PORT || 3002;
@@ -24,16 +24,20 @@ app.use(
 );
 app.use(express.json());
 
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
+
 // Routes
 const projectsRouter = require("./routes/projects");
 const secretsRouter = require("./routes/secrets");
 const usersRouter = require("./routes/users");
-const environmentsRouter = require("./routes/environments");
 
 app.use("/api/projects", projectsRouter);
 app.use("/api/secrets", secretsRouter);
 app.use("/api/users", usersRouter);
-app.use("/api/environments", environmentsRouter);
 
 // Test route
 app.get("/api/test", (req, res) => {
