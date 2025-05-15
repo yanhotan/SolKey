@@ -319,6 +319,7 @@ export function SecretsTable({
   };
   
   return (
+    
     <div className="rounded-md border">
       <div className="p-2 bg-muted/40 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -371,7 +372,7 @@ export function SecretsTable({
                       }>
                         {visibleSecrets[secret.id] ? 
                           (secret.decryptedValue || "Decryption failed") : 
-                          "[encrypted]"
+                          "******************"
                         }
                       </span>
                     </div>

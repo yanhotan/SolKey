@@ -643,7 +643,7 @@ export function ProjectDetail({ id }: { id: string }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1">
           {environments.map((env) => (
             <div key={env} className="relative group">
               <Button
@@ -652,9 +652,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 onClick={() => setCurrentEnvironment(env)}
               >
                 {env}
-                <Badge variant="outline" className="ml-2 bg-background">
-                  {project.secrets[env]?.configs || 0}
-                </Badge>
+                
               </Button>
               {environments.length > 1 && env !== "production" && (
                 <Button
@@ -912,13 +910,19 @@ export function ProjectDetail({ id }: { id: string }) {
               </CardContent>
             </Card>
           ))}
-          <Button variant="outline" className="flex h-16 items-center justify-center border-dashed">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Config
-          </Button>
+          
         </div>
         
-        <div className="flex flex-wrap gap-2">
+       
+        
+        {showEditor ? (
+          <div className="mt-4">
+            {/* Editor placeholder */}
+          </div>
+        ) : (
+          <div className="mt-4">
+            <h3 className="mb-4 font-medium">Project Secrets</h3>
+             <div className="flex flex-wrap gap-3">
           <Button 
             variant="outline" 
             size="sm"
@@ -954,18 +958,14 @@ export function ProjectDetail({ id }: { id: string }) {
           </Button>
         </div>
         
-        {showEditor ? (
-          <div className="mt-4">
-            {/* Editor placeholder */}
-          </div>
-        ) : (
-          <div className="mt-4">
-            <h3 className="mb-4 font-medium">Project Secrets</h3>
+         <div className="mt-6">
             <SecretsTable 
               projectId={id} 
               environment={currentEnvironment} 
               searchQuery={searchQuery} 
             />
+          </div>
+
           </div>
         )}
       </div>
