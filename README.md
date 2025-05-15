@@ -1,198 +1,223 @@
-# SolSecure Project Setup Guide
+# SolSecure: Wallet-Based End-to-End Encrypted Secret Management
 
-This is a full-stack application with a Next.js frontend and Node.js backend. The project uses MongoDB for data storage and includes Solana wallet integration.
+SolSecure is a secure end-to-end encrypted secret management system built with Solana wallet authentication. It uses client-side encryption and Solana wallet signatures to ensure that sensitive information remains protected at all times.
+
+## Architecture Overview
+
+SolSecure uses a modern, secure architecture:
+
+- **Frontend**: Next.js application with Solana wallet integration
+- **Backend**: Express.js server with Supabase database
+- **Security**: End-to-end encryption using WebCrypto API
+- **Authentication**: Solana wallet signatures
+
+### Security Model
+
+1. **End-to-End Encryption**: All secrets are encrypted in the browser before being sent to the server
+2. **Wallet-Based Authentication**: User identity is verified through Solana wallet signatures
+3. **Zero Knowledge Design**: The backend never sees plaintext secrets
 
 ## Prerequisites
 
 - Node.js >= 18.0.0
-- MongoDB >= 6.0
 - pnpm (recommended) or npm
-- Docker and Docker Compose (optional, for containerized setup)
+- A compatible Solana wallet (Phantom, Solflare, etc.)
+- Modern browser with WebCrypto support (Chrome, Firefox, Edge, Safari)
 
 ## Project Structure
 
 ```
 solsecure/
 ├── frontend/          # Next.js frontend application
-├── solkey-backend/    # Express.js backend server
-├── scripts/          # Utility scripts
-└── docker-compose.yml # Docker configuration
+│   ├── components/    # React components
+│   ├── hooks/         # Custom React hooks for wallet integration
+│   │   ├── use-secret-decryption.ts  # Secret decryption logic
+│   │   ├── use-secret-encryption.ts  # Secret encryption logic
+│   │   └── use-wallet-encryption.ts  # Wallet-based key management
+│   ├── lib/           # Utility functions
+│   │   ├── api.ts         # Backend API client
+│   │   ├── crypto.ts      # WebCrypto wrapper functions
+│   │   └── wallet-auth.ts # Wallet authentication
+│   └── app/           # Next.js app directory
+│
+├── backend/          # Express.js backend server
+│   ├── lib/          # Backend utilities
+│   │   ├── crypto.js     # Crypto operations (key management)
+│   │   └── supabase.js   # Database connection
+│   ├── routes/       # API routes
+│   │   ├── secrets.js    # Secret management endpoints
+│   │   └── projects.js   # Project management endpoints
+│   └── index.js      # Server entry point
 ```
 
 ## Quick Start (Development)
 
-### 1. Clone the Repository
-
-```powershell
-git clone <repository-url>
-cd solsecure
-```
-
-### 2. Frontend Setup
-
-Navigate to the frontend directory and install dependencies:
+### 1. Frontend Setup
 
 ```powershell
 cd frontend
-pnpm install   # or npm install
+pnpm install
 ```
-
-Required frontend dependencies:
-- Next.js and React dependencies
-- Solana wallet integration:
-  - @solana/web3.js
-  - @solana/wallet-adapter-base
-  - @solana/wallet-adapter-react
-  - @solana/wallet-adapter-react-ui
-  - @solana/wallet-adapter-wallets
-- UI components:
-  - @radix-ui/* components
-  - class-variance-authority
-  - clsx
-  - tailwindcss
-- Utilities:
-  - @hookform/resolvers
-  - @noble/hashes
-  - bs58 (for wallet operations)
 
 Create a `.env.local` file in the frontend directory:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_API_URL=http://localhost:3002
 ```
 
 Start the development server:
 
 ```powershell
-pnpm dev   # or npm run dev
+pnpm dev
 ```
 
-### 3. Backend Setup
+The frontend will be available at `http://localhost:3000`.
 
-Navigate to the backend directory and install dependencies:
+### 2. Backend Setup
 
 ```powershell
-cd ../solkey-backend
-pnpm install   # or npm install
+cd backend
+pnpm install
 ```
-
-Required backend dependencies:
-- Core dependencies:
-  - express
-  - mongoose
-  - cors
-  - helmet
-  - body-parser
-  - dotenv
-- Authentication:
-  - jsonwebtoken
-  - passport
-  - passport-jwt
-  - passport-google-oauth20
-  - passport-github2
-  - bcryptjs
-- Solana integration:
-  - @solana/web3.js
-  - tweetnacl
-  - bs58
-- Development tools:
-  - nodemon
-  - jest
-  - eslint
-  - prettier
 
 Create a `.env` file in the backend directory:
 
 ```env
-PORT=4000
-MONGODB_URI=mongodb://localhost:27017/solkey
-JWT_SECRET=your_jwt_secret_here
-NODE_ENV=development
+PORT=3002
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_KEY=your_supabase_service_key
+FRONTEND_URL=http://localhost:3000
 ```
 
-Start the development server:
+Start the backend server:
 
 ```powershell
-pnpm dev   # or npm run dev
+pnpm dev
 ```
 
-### 4. MongoDB Setup
+The backend API will be available at `http://localhost:3002`.
 
-#### Option 1: Local MongoDB
+## Key Features
 
-Install MongoDB locally and start the service:
+### 1. Wallet-Based Authentication
 
-```powershell
-Start-Service MongoDB
-```
+SolSecure uses Solana wallets for authentication, eliminating the need for passwords:
 
-#### Option 2: Docker (Recommended)
+- Connect your Solana wallet to access the application
+- Sign messages to verify your identity
+- Your wallet address serves as your unique identifier
 
-Use the provided Docker Compose file:
+### 2. End-to-End Encryption
 
-```powershell
-docker-compose up -d
-```
+All sensitive data is encrypted in your browser before transmission:
 
-## Running Tests
+- AES-256-GCM encryption using WebCrypto API
+- Encryption keys derived from wallet signatures
+- Backend only stores encrypted data
 
-### Backend Tests
+### 3. Secret Management
 
-```powershell
-cd solkey-backend
-pnpm test              # Run all tests
-pnpm test:watch       # Run tests in watch mode
-pnpm test:integration # Run integration tests
-```
+- Create and manage encrypted secrets
+- Organize secrets by projects and environments
+- Share secrets with other wallet addresses securely
 
-## Environment Variables
+## Encryption Flow
 
-### Frontend (.env.local)
-```env
-NEXT_PUBLIC_API_URL=http://localhost:4000
-```
+### 1. Key Derivation
 
-### Backend (.env)
-```env
-PORT=4000
-MONGODB_URI=mongodb://localhost:27017/solkey
-JWT_SECRET=your_jwt_secret_here
-NODE_ENV=development
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
-```
+1. User signs a message using their Solana wallet
+2. The signature is used to derive an AES-256 encryption key using PBKDF2
+3. This key is securely stored in browser localStorage for the session
 
-## Additional Setup
+### 2. Secret Encryption
 
-1. MongoDB Initialization
-   - The application will create necessary collections on first run
-   - Initial admin user can be created through the signup process
+1. User creates a new secret in the browser
+2. The secret is encrypted using AES-256-GCM with the derived key
+3. Only the encrypted data, along with IV, is sent to the backend
+4. Backend stores this encrypted package in the Supabase database
 
-2. Wallet Configuration
-   - Configure supported wallet adapters in `frontend/components/wallet-config.tsx`
-   - Test wallet integration using the test-encryption page
+### 3. Secret Decryption
 
-## Common Issues & Solutions
+1. User requests a secret from the backend
+2. Backend verifies wallet signature and sends encrypted data
+3. Frontend decrypts the data using the wallet-derived key
+4. Decrypted data never leaves the user's browser
 
-1. MongoDB Connection Issues
-   - Ensure MongoDB is running
-   - Check connection string in `.env`
-   - Verify network access if using Docker
+## API Routes
 
-2. Wallet Integration Issues
-   - Clear localStorage if encryption initialization fails
-   - Ensure correct network (devnet/mainnet) configuration
-   - Check browser console for detailed error messages
+### Backend API
 
-## Development Workflow
+- `POST /secrets`: Create a new encrypted secret
+- `GET /secrets/:id`: Get an encrypted secret
+- `POST /secrets/:id/share`: Share a secret with another wallet
+- `POST /secrets/:id/decrypt`: Client-side decryption endpoint
 
-1. Start MongoDB service or containers
-2. Start backend server (`pnpm dev` in backend directory)
-3. Start frontend development server (`pnpm dev` in frontend directory)
-4. Access the application at `http://localhost:3000`
+## Database Schema
 
-## Production Deployment
+SolSecure uses Supabase with the following tables:
 
-For production deployment instructions, see `DEPLOYMENT.md` (separate document)
+- `projects`: Store project information
+- `environments`: Different environments within projects (dev, staging, prod)
+- `secrets`: Encrypted secret values with their metadata
+- `secret_keys`: Wallet-specific encryption keys for shared secrets
+- `users`: User profile information linked to wallet addresses
+- `project_members`: Project access control
+
+## Troubleshooting
+
+### Common Issues
+
+#### "Encryption key not available"
+
+- Ensure your wallet is connected
+- Click "Sign & Decrypt" to sign a message and generate the encryption key
+- Check browser console for detailed error messages
+
+#### Decryption Failures
+
+- Clear browser localStorage and reconnect your wallet
+- Ensure you're using the same wallet that encrypted the data
+- Check browser console for detailed error information
+- Run the diagnostic tool from the dashboard to verify WebCrypto compatibility
+
+#### Wallet Connection Issues
+
+- Ensure your wallet extension is installed and unlocked
+- Try refreshing the page
+- Check for wallet adapter compatibility
+
+## Security Considerations
+
+- The application uses industry-standard AES-256-GCM encryption
+- Private keys never leave your wallet
+- Wallet signatures are only used for authentication and key derivation
+- Consider using hardware wallets for additional security
+
+## Development Guidelines
+
+### Testing Encryption/Decryption
+
+- Use the built-in verification tools in the dashboard
+- Check browser console for detailed logs during encryption/decryption
+- Test with different wallet adapters to ensure compatibility
+
+### Adding New Features
+
+- Maintain the end-to-end encryption model
+- Keep sensitive operations client-side
+- Avoid sending plaintext to the backend
+
+## Deployment
+
+For production deployment:
+
+1. Set appropriate environment variables
+2. Use HTTPS for all communications
+3. Configure CORS settings for your domain
+4. Use a production-ready Supabase project
+5. Consider implementing rate limiting for API endpoints
+
+## Contributing
+
+Contributions are welcome! Please submit a pull request with your changes.

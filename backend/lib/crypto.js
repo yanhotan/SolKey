@@ -67,28 +67,84 @@ function encryptAESKeyForUser(aesKey, userPublicKeyBase58) {
 
 // Encrypt data with AES
 function encryptWithAES(data, key) {
-  const iv = crypto.randomBytes(16);
+  // Use a 12-byte IV for better WebCrypto compatibility (was 16 bytes)
+  const iv = crypto.randomBytes(12);
+  
+  console.log("Encryption IV details:", {
+    bytesLength: iv.length,
+    hexLength: iv.toString("hex").length,
+    hexValue: iv.toString("hex"),
+    firstBytes: iv.slice(0, 4).toString("hex")
+  });
+  
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
 
   let encrypted = cipher.update(data, "utf8", "base64");
   encrypted += cipher.final("base64");
 
   const authTag = cipher.getAuthTag();
+  
+  console.log("Encryption details:", {
+    encryptedBase64Length: encrypted.length,
+    authTagLength: authTag.length,
+    authTagHex: authTag.toString("hex"),
+    ivLength: iv.length
+  });
+
+  // For WebCrypto compatibility - combine ciphertext and authTag before base64 encoding
+  // WebCrypto expects the authTag to be appended to the ciphertext
+  const encryptedBytes = Buffer.concat([
+    Buffer.from(encrypted, 'base64'), 
+    authTag
+  ]);
+  const combinedEncrypted = encryptedBytes.toString('base64');
+  
+  console.log("Final combined encrypted data:", {
+    combinedBase64Length: combinedEncrypted.length,
+    originalCipherTextLength: Buffer.from(encrypted, 'base64').length,
+    authTagLength: authTag.length,
+    totalBytesLength: encryptedBytes.length,
+    // Show the first few bytes of each component for debugging
+    originalBase64FirstChars: encrypted.substring(0, 16) + '...',
+    combinedBase64FirstChars: combinedEncrypted.substring(0, 16) + '...'
+  });
 
   return {
-    encrypted,
+    encrypted: combinedEncrypted, // Combined ciphertext + authTag
     iv: iv.toString("hex"),
-    authTag: authTag.toString("hex"),
+    authTag: authTag.toString("hex"), // Keep for backward compatibility
   };
 }
 
 // Decrypt data with AES
 function decryptWithAES(encryptedData, key, iv, authTag) {
-  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(authTag);
+  // Support both hex string and Buffer IV/authTag
+  const ivBuffer = Buffer.isBuffer(iv) ? iv : Buffer.from(iv, 'hex');
+  const authTagBuffer = Buffer.isBuffer(authTag) ? authTag : Buffer.from(authTag, 'hex');
+  
+  console.log("Decryption parameters:", {
+    ivLength: ivBuffer.length,
+    authTagLength: authTagBuffer.length,
+    keyLength: key.length,
+    encryptedDataLength: encryptedData.length
+  });
 
-  let decrypted = decipher.update(encryptedData, "base64", "utf8");
-  decrypted += decipher.final("utf8");
+  // Create decipher with the IV
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, ivBuffer);
+  
+  // Set auth tag
+  decipher.setAuthTag(authTagBuffer);
+
+  // Decrypt
+  let decrypted;
+  try {
+    decrypted = decipher.update(encryptedData, "base64", "utf8");
+    decrypted += decipher.final("utf8");
+    console.log("Decryption successful, result length:", decrypted.length);
+  } catch (error) {
+    console.error("Decryption error:", error);
+    throw new Error(`Decryption failed: ${error.message}`);
+  }
 
   return decrypted;
 }
@@ -158,9 +214,18 @@ async function createSecret(
     
     // Generate random AES key
     const secretKey = crypto.randomBytes(32); // 256-bit AES key
+    console.log("Generated AES key:", {
+      keyLength: secretKey.length,
+      firstFourBytes: secretKey.slice(0, 4).toString('hex')
+    });
 
     // Encrypt secret data with AES
     const encryptedSecret = encryptWithAES(value, secretKey);
+    console.log("Encrypted secret result:", {
+      encryptedValueLength: encryptedSecret.encrypted?.length,
+      ivLength: encryptedSecret.iv?.length,
+      authTagLength: encryptedSecret.authTag?.length
+    });
 
     // Get project members
     const { data: members, error: membersError } = await supabase
@@ -195,6 +260,11 @@ async function createSecret(
 
     // Encrypt AES key for each member
     for (const member of members) {
+      if (!member.wallet_address) {
+        console.log("Skipping member with null wallet_address");
+        continue;
+      }
+
       console.log(`Encrypting for member: ${member.wallet_address}`);
       const { encryptedAESKey, nonce, ephemeralPublicKey } =
         encryptAESKeyForUser(secretKey, member.wallet_address);

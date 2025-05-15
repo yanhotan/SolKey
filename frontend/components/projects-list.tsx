@@ -1,13 +1,28 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Search, Grid3X3, List, MoreHorizontal, GitBranch, Users, Plus } from "lucide-react"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import {
+  Search,
+  Grid3X3,
+  List,
+  MoreHorizontal,
+  GitBranch,
+  Users,
+  Plus,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,76 +30,45 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
+
+type Projects = {
+  id: string;
+  name: string;
+  description: string;
+  environments: number;
+  members: number;
+  status: "active" | "inactive";
+  updatedAt: string;
+};
 
 export function ProjectsList() {
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [searchQuery, setSearchQuery] = useState("")
+  const [projects, setProjects] = useState<Projects[]>([]);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Sample project data
-  const projects = [
-    {
-      id: "1",
-      name: "Backend API",
-      description: "Main backend API service with authentication and core services",
-      environments: 3,
-      members: 5,
-      updatedAt: "2 hours ago",
-      status: "active",
-    },
-    {
-      id: "2",
-      name: "Web Dashboard",
-      description: "Customer-facing web dashboard for analytics and reporting",
-      environments: 4,
-      members: 3,
-      updatedAt: "Yesterday",
-      status: "active",
-    },
-    {
-      id: "3",
-      name: "Mobile App",
-      description: "iOS and Android mobile application configuration",
-      environments: 2,
-      members: 4,
-      updatedAt: "3 days ago",
-      status: "active",
-    },
-    {
-      id: "4",
-      name: "Analytics Service",
-      description: "Data processing and analytics pipeline",
-      environments: 3,
-      members: 2,
-      updatedAt: "1 week ago",
-      status: "inactive",
-    },
-    {
-      id: "5",
-      name: "Payment Gateway",
-      description: "Solana payment processing service",
-      environments: 3,
-      members: 6,
-      updatedAt: "2 days ago",
-      status: "active",
-    },
-    {
-      id: "6",
-      name: "Marketing Website",
-      description: "Public-facing marketing website and blog",
-      environments: 2,
-      members: 3,
-      updatedAt: "5 days ago",
-      status: "active",
-    },
-  ]
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const res = await fetch("http://localhost:3002/api/projects");
+        const data = await res.json();
+        setProjects(Array.isArray(data) ? data : data.projects || []);
+      } catch (error) {
+        console.error("Failed to fetch projects:", error);
+        setProjects([]); // Set to empty array on error
+      }
+    }
+
+    fetchProjects();
+  }, []);
 
   // Filter projects based on search query
-  const filteredProjects = projects.filter(
+  const filteredProjects = Array.isArray(projects) ? projects.filter(
     (project) =>
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+      project.description.toLowerCase().includes(searchQuery.toLowerCase())
+  ) : [];
 
   return (
     <div className="space-y-4">
@@ -111,7 +95,9 @@ export function ProjectsList() {
             <Button
               variant="ghost"
               size="icon"
-              className={`rounded-r-none ${viewMode === "grid" ? "bg-muted" : ""}`}
+              className={`rounded-r-none ${
+                viewMode === "grid" ? "bg-muted" : ""
+              }`}
               onClick={() => setViewMode("grid")}
             >
               <Grid3X3 className="h-4 w-4" />
@@ -120,7 +106,9 @@ export function ProjectsList() {
             <Button
               variant="ghost"
               size="icon"
-              className={`rounded-l-none ${viewMode === "list" ? "bg-muted" : ""}`}
+              className={`rounded-l-none ${
+                viewMode === "list" ? "bg-muted" : ""
+              }`}
               onClick={() => setViewMode("list")}
             >
               <List className="h-4 w-4" />
@@ -138,15 +126,24 @@ export function ProjectsList() {
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-xl">
-                      <Link href={`/dashboard/projects/${project.id}`} className="hover:underline">
+                      <Link
+                        href={`/dashboard/projects/${project.id}`}
+                        className="hover:underline"
+                      >
                         {project.name}
                       </Link>
                     </CardTitle>
-                    <CardDescription className="mt-1">{project.description}</CardDescription>
+                    <CardDescription className="mt-1">
+                      {project.description}
+                    </CardDescription>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="-mt-1 -mr-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="-mt-1 -mr-2"
+                      >
                         <MoreHorizontal className="h-4 w-4" />
                         <span className="sr-only">More options</span>
                       </Button>
@@ -156,7 +153,9 @@ export function ProjectsList() {
                       <DropdownMenuItem>Edit project</DropdownMenuItem>
                       <DropdownMenuItem>Clone project</DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">Delete project</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive">
+                        Delete project
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -174,8 +173,14 @@ export function ProjectsList() {
                 </div>
               </CardContent>
               <CardFooter className="flex items-center justify-between border-t bg-muted/50 px-6 py-3">
-                <div className="text-xs text-muted-foreground">Updated {project.updatedAt}</div>
-                <Badge variant={project.status === "active" ? "default" : "secondary"}>
+                <div className="text-xs text-muted-foreground">
+                  Updated {project.updatedAt}
+                </div>
+                <Badge
+                  variant={
+                    project.status === "active" ? "default" : "secondary"
+                  }
+                >
                   {project.status === "active" ? "Active" : "Inactive"}
                 </Badge>
               </CardFooter>
@@ -205,16 +210,25 @@ export function ProjectsList() {
           {filteredProjects.map((project, index) => (
             <div
               key={project.id}
-              className={`grid grid-cols-12 gap-4 p-4 ${index !== filteredProjects.length - 1 ? "border-b" : ""}`}
+              className={`grid grid-cols-12 gap-4 p-4 ${
+                index !== filteredProjects.length - 1 ? "border-b" : ""
+              }`}
             >
               <div className="col-span-5">
                 <div className="font-medium">
-                  <Link href={`/dashboard/projects/${project.id}`} className="hover:underline">
+                  <Link
+                    href={`/dashboard/projects/${project.id}`}
+                    className="hover:underline"
+                  >
                     {project.name}
                   </Link>
                 </div>
-                <div className="text-sm text-muted-foreground">{project.description}</div>
-                <div className="mt-1 text-xs text-muted-foreground">Updated {project.updatedAt}</div>
+                <div className="text-sm text-muted-foreground">
+                  {project.description}
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Updated {project.updatedAt}
+                </div>
               </div>
               <div className="col-span-2 flex items-center">
                 <div className="flex items-center gap-1">
@@ -229,7 +243,11 @@ export function ProjectsList() {
                 </div>
               </div>
               <div className="col-span-2 flex items-center">
-                <Badge variant={project.status === "active" ? "default" : "secondary"}>
+                <Badge
+                  variant={
+                    project.status === "active" ? "default" : "secondary"
+                  }
+                >
                   {project.status === "active" ? "Active" : "Inactive"}
                 </Badge>
               </div>
@@ -246,13 +264,18 @@ export function ProjectsList() {
                     <DropdownMenuItem>Edit project</DropdownMenuItem>
                     <DropdownMenuItem>Clone project</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive">Delete project</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive">
+                      Delete project
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
           ))}
-          <Link href="/dashboard/projects/new" className="block border-t p-4 text-center hover:bg-muted/50">
+          <Link
+            href="/dashboard/projects/new"
+            className="block border-t p-4 text-center hover:bg-muted/50"
+          >
             <Button variant="outline">
               <Plus className="mr-2 h-4 w-4" />
               Create New Project
@@ -266,7 +289,9 @@ export function ProjectsList() {
           <div className="text-center">
             <h3 className="text-lg font-medium">No projects found</h3>
             <p className="text-sm text-muted-foreground">
-              {searchQuery ? `No projects matching "${searchQuery}"` : "Get started by creating your first project"}
+              {searchQuery
+                ? `No projects matching "${searchQuery}"`
+                : "Get started by creating your first project"}
             </p>
             {!searchQuery && (
               <Button className="mt-4" asChild>
@@ -277,5 +302,5 @@ export function ProjectsList() {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import 'dotenv/config' // <- MUST be at the top!
 
 /**
  * Load your teammates' JS helpers directly.

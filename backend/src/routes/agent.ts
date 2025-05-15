@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { openai, tools } from '../openai'
 import { toolFunctions } from '../tools'
+import 'dotenv/config'
 
 const router = Router()
 
