@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect , useState } from "react";
 import {
   Card,
   CardContent,
@@ -24,6 +24,7 @@ export function BillingPlans() {
   const [isConnectWalletOpen, setIsConnectWalletOpen] = useState(false);
   const [currency, setCurrency] = useState<"usdc" | "sol">("usdc");
 
+  
   const plans = [
     {
       id: "free",
@@ -47,7 +48,7 @@ export function BillingPlans() {
       name: "Pro",
       basePrice: 20,
       usdcPrice: "$20",
-      solPrice: "0.095 SOL",
+      solPrice: "0.5 SOL",
       description: "For growing teams with advanced needs",
       features: [
         "First 3 users included",
@@ -234,22 +235,20 @@ function SolanaWalletConnect({
   const [walletAddress, setWalletAddress] = useState<string>("");
   const [showPayment, setShowPayment] = useState(false);
 
+  
   // Update wallet address when connection status changes
   useEffect(() => {
     if (connected && publicKey) {
       const address = publicKey.toString();
       // Format address to show first 4 and last 4 characters
-      const formattedAddress = `${address.substring(
-        0,
-        4
-      )}...${address.substring(address.length - 4)}`;
+      const formattedAddress = `${address.substring(0, 4)}...${address.substring(address.length - 4)}`;
       setWalletAddress(formattedAddress);
     } else {
       setWalletAddress("");
     }
   }, [connected, publicKey]);
 
-  const handleContinue = () => {
+    const handleContinue = () => {
     setShowPayment(true);
   };
 
@@ -264,18 +263,15 @@ function SolanaWalletConnect({
             transition={{ type: "spring", duration: 0.4 }}
           >
             {/* Existing connect wallet content */}
-            <h3 className="text-xl font-bold mb-4">
-              Connect Your Solana Wallet
-            </h3>
+            <h3 className="text-xl font-bold mb-4">Connect Your Solana Wallet</h3>
             <p className="text-muted-foreground mb-6">
               Connect your Solana wallet to make a payment in{" "}
               {currency === "usdc" ? "USDC" : "SOL"}.
-              {currency === "sol" &&
-                " Enjoy a 15% discount when paying with SOL!"}
+              {currency === "sol" && " Enjoy a 15% discount when paying with SOL!"}
             </p>
 
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 p-3 border rounded-md hover:bg-accent/50 cursor-pointer">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 p-3 border rounded-md hover:bg-accent/50 cursor-pointer">
                 <div className="h-6 w-6 rounded-full bg-purple-500 flex items-center justify-center text-white">
                   <svg viewBox="0 0 32 32" className="h-3 w-3">
                     <path
@@ -288,7 +284,7 @@ function SolanaWalletConnect({
                     />
                   </svg>
                 </div>
-                <div className="flex flex-1 items-center w-full justify-between">
+                <div className="flex flex-1 items-center w-full justify-between"> 
                   <span>Phantom</span>
                   <span>
                     {connected && walletAddress ? (
@@ -301,39 +297,39 @@ function SolanaWalletConnect({
                     )}
                   </span>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 p-3 border rounded-md hover:bg-accent/50 cursor-pointer">
-                <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center text-white">
-                  <svg viewBox="0 0 32 32" className="h-3 w-3">
-                    <path
-                      d="M16 0C7.163 0 0 7.163 0 16s7.163 16 16 16 16-7.163 16-16S24.837 0 16 0z"
-                      fill="#FE8F2D"
-                    />
-                    <path
-                      d="M20.8 10.4h-9.6c-1.76 0-3.2 1.44-3.2 3.2v4.8c0 1.76 1.44 3.2 3.2 3.2h9.6c1.76 0 3.2-1.44 3.2-3.2v-4.8c0-1.76-1.44-3.2-3.2-3.2z"
-                      fill="#fff"
-                    />
-                  </svg>
-                </div>
-                <div className="flex flex-1 items-center w-full justify-between">
-                  <span>Solflare</span>
-                  <span>
-                    {connected && walletAddress ? (
-                      <Button variant="ghost" size="sm" className="gap-2">
-                        <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                        {walletAddress}
-                      </Button>
-                    ) : (
-                      <ConnectWalletButton />
-                    )}
-                  </span>
-                </div>
-              </div>
             </div>
 
-            <div className="mt-6 flex justify-end space-x-2">
-              {connected && (
+            <div className="flex items-center gap-2 p-3 border rounded-md hover:bg-accent/50 cursor-pointer">
+              <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center text-white">
+                <svg viewBox="0 0 32 32" className="h-3 w-3">
+                  <path
+                    d="M16 0C7.163 0 0 7.163 0 16s7.163 16 16 16 16-7.163 16-16S24.837 0 16 0z"
+                    fill="#FE8F2D"
+                  />
+                  <path
+                    d="M20.8 10.4h-9.6c-1.76 0-3.2 1.44-3.2 3.2v4.8c0 1.76 1.44 3.2 3.2 3.2h9.6c1.76 0 3.2-1.44 3.2-3.2v-4.8c0-1.76-1.44-3.2-3.2-3.2z"
+                    fill="#fff"
+                  />
+                </svg>
+              </div>
+              <div className="flex flex-1 items-center w-full justify-between"> 
+                <span>Solflare</span>
+                <span>
+                  {connected && walletAddress ? (
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                      {walletAddress}
+                    </Button>
+                  ) : (
+                    <ConnectWalletButton />
+                  )}
+                </span>
+              </div>
+            </div>
+        </div>
+
+        <div className="mt-6 flex justify-end space-x-2">
+          {connected && (
                 <Button variant="default" onClick={handleContinue}>
                   Continue to Payment
                 </Button>
@@ -349,8 +345,8 @@ function SolanaWalletConnect({
           onClose={onClose}
           onSuccess={() => {
             setTimeout(() => {
-              toast.success("Subscription upgraded successfully!");
-              onClose();
+      toast.success("Subscription upgraded successfully!");
+      onClose();
             }, 3000);
           }}
           onError={(error) => {
