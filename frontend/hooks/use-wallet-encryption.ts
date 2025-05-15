@@ -1,165 +1,251 @@
 "use client"
 
-import { useCallback, useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { 
-  generateEncryptionKey, 
-  exportKeyToBase64, 
+  encryptData as encryptWithKey,
+  decryptData as decryptWithKey,
   importKeyFromBase64,
-  encryptData, 
-  decryptData
-} from '../lib/crypto';
-import { deriveEncryptionKey as walletAuthDeriveEncryptionKey } from '../lib/wallet-auth';
+  exportKeyToBase64,
+  EncryptedData
+} from '@/lib/crypto';
+import { deriveEncryptionKey } from '@/lib/wallet-auth';
+import { toast } from '@/hooks/use-toast';
 import bs58 from 'bs58';
-import { WALLET_CONFIG } from '../lib/wallet-adapter';
+import { WALLET_CONFIG } from '@/lib/wallet-adapter';
 
-export interface UseWalletEncryptionReturn {
-  isInitialized: boolean;
-  handleSignMessage: () => Promise<CryptoKey>;
-  encryptData: (data: string) => Promise<any>;
-  decryptData: (encryptedData: any) => Promise<string | null>;
-  error: string | null;
+// Storage keys for localStorage
+const WALLET_ADDRESS_STORAGE_KEY = 'solkey_wallet_address';
+const ENCRYPTION_KEY_STORAGE_KEY = 'solkey_encryption_key';
+
+// Helper to get stored encryption data
+function getStoredEncryptionData() {
+  const walletAddress = localStorage.getItem(WALLET_ADDRESS_STORAGE_KEY);
+  const encryptionKey = localStorage.getItem(ENCRYPTION_KEY_STORAGE_KEY);
+  
+  if (!walletAddress || !encryptionKey) {
+    return null;
+  }
+  
+  return {
+    walletAddress,
+    encryptionKey
+  };
 }
 
-// Storage keys
-const WALLET_ADDRESS_STORAGE_KEY = 'solkey:walletAddress';
-const ENCRYPTION_KEY_STORAGE_KEY = 'solkey:encryption-key';
-
-export function useWalletEncryption(): UseWalletEncryptionReturn {
-  const { publicKey, connected, signMessage } = useWallet();
+/**
+ * Hook for wallet-based encryption/decryption
+ * This is a simplified version that uses a deterministic encryption key
+ * derived from the wallet signature
+ */
+export function useWalletEncryption() {
+  const { publicKey, signMessage, connected } = useWallet();
+  const [isInitialized, setIsInitialized] = useState(false);
   const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  function checkIfInitialized(): boolean {
-    // Check both memory state AND localStorage for encryption key
-    return !!encryptionKey || !!localStorage.getItem(ENCRYPTION_KEY_STORAGE_KEY);
-  }
-
-  // Check if wallet is initialized on mount and when connection changes
+  // Check if we have encryption data in localStorage on mount
   useEffect(() => {
-    if (!connected) {
-      setEncryptionKey(null);
-      localStorage.removeItem(WALLET_ADDRESS_STORAGE_KEY);
-      localStorage.removeItem(ENCRYPTION_KEY_STORAGE_KEY);
-      setIsInitialized(false);
+    // Check if there's encryption data in localStorage
+    const storedData = getStoredEncryptionData();
+    // Only set as initialized if we have a matching wallet address
+    if (connected && publicKey && storedData && storedData.walletAddress === publicKey.toBase58()) {
+      console.log('Found stored encryption key for current wallet');
+      setIsInitialized(true);
     } else {
-      setIsInitialized(checkIfInitialized());
+      setIsInitialized(false);
     }
-  }, [connected]);
+  }, [publicKey, connected]);
 
-  // Store wallet address when publicKey changes
-  useEffect(() => {
-    if (connected && publicKey) {
-      localStorage.setItem(WALLET_ADDRESS_STORAGE_KEY, publicKey.toBase58());
-    }
-  }, [connected, publicKey]);
-
+  // Function to handle signature and derive encryption key
   const handleSignMessage = useCallback(async () => {
-    if (!publicKey || !signMessage) {
-      console.error('Wallet not connected');
-      throw new Error('Please connect your wallet first');
+    if (!connected || !publicKey || !signMessage) {
+      throw new Error('Wallet not connected');
     }
+
+    setIsLoading(true);
+    setError(null);
 
     try {
-      setError(null);
+      // Create a message to sign
+      const message = new TextEncoder().encode('SolKey-Auth-' + publicKey.toBase58().substring(0, 8));
       
-      // Always store the wallet address
-      localStorage.setItem(WALLET_ADDRESS_STORAGE_KEY, publicKey.toBase58());
-      
-      // Sign the message - using the standard auth-to-decrypt message
-      const message = new TextEncoder().encode(WALLET_CONFIG.signatureMessage);
+      // Request the user to sign
       const signature = await signMessage(message);
+      console.log('✅ Message signed successfully, deriving encryption key');
+      
+      // Convert signature to base58 for storage
       const signatureBase58 = bs58.encode(signature);
       
-      console.log("Message signed successfully, deriving encryption key");
+      // Use the message text string, not the Uint8Array
+      const messageText = 'SolKey-Auth-' + publicKey.toBase58().substring(0, 8);
       
-      // Use wallet-auth's deriveEncryptionKey to ensure consistent key storage
-      const key = await walletAuthDeriveEncryptionKey(WALLET_CONFIG.signatureMessage, signatureBase58);
+      // Store wallet address
+      localStorage.setItem(WALLET_ADDRESS_STORAGE_KEY, publicKey.toBase58());
       
-      // Add debug info to verify the key was stored properly
-      const storedKey = localStorage.getItem(ENCRYPTION_KEY_STORAGE_KEY);
+      // Derive encryption key using the signatureBase58
+      // deriveEncryptionKey returns a CryptoKey object
+      const key = await deriveEncryptionKey(messageText, signatureBase58);
+      console.log('✅ Successfully derived encryption key');
       
-      if (!storedKey) {
-        console.error("💥 Critical error: Key not properly stored in localStorage after derivation");
-        throw new Error("Failed to store encryption key");
-      }
+      // Export the key to base64 for storage
+      const keyBase64 = await exportKeyToBase64(key);
+      console.log('✅ Successfully exported key to base64 for storage');
       
-      // Store the key in memory state too
-      try {
-        const importedKey = await importKeyFromBase64(storedKey);
-        setEncryptionKey(importedKey);
-      } catch (err) {
-        console.warn("⚠️ Could not import stored key:", err);
-      }
+      // Store the exported key in localStorage
+      localStorage.setItem(ENCRYPTION_KEY_STORAGE_KEY, keyBase64);
       
-      // Debug key information
-      try {
-        const keyBytes = new Uint8Array(atob(storedKey).split('').map(c => c.charCodeAt(0)));
-        console.log("🔑 Derived encryption key details:", {
-          keyLength: keyBytes.length,
-          keyBytesCorrect: keyBytes.length === 32,
-          firstFourBytes: Array.from(keyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
-        });
-      } catch (err) {
-        console.warn("⚠️ Could not debug key bytes:", err);
-      }
-      
-      console.log("Encryption key derived and stored successfully");
+      setEncryptionKey(key);
       setIsInitialized(true);
+      
       return key;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to initialize encryption';
-      setError(errorMessage);
-      throw err;
+      console.error('Failed to initialize wallet encryption:', err);
+      
+      // Handle specific errors
+      if (err instanceof Error) {
+        const errorMessage = err.message;
+        if (errorMessage.includes('declined') || errorMessage.includes('reject')) {
+          throw new Error('You declined to sign the message. Wallet signature is required for encryption.');
+        }
+        setError(errorMessage);
+        throw err;
+      }
+      
+      setError('Unknown error initializing wallet encryption');
+      throw new Error('Failed to initialize wallet encryption');
+    } finally {
+      setIsLoading(false);
     }
-  }, [publicKey, signMessage]);
+  }, [connected, publicKey, signMessage]);
 
+  // Function to encrypt data
   const handleEncryptData = useCallback(async (data: string) => {
-    try {
-      // Get the encryption key - either from state or localStorage
-      let key = encryptionKey;
-      if (!key) {
-        const storedKey = localStorage.getItem(ENCRYPTION_KEY_STORAGE_KEY);
-        if (!storedKey) {
-          throw new Error("No encryption key available. Please connect your wallet and sign first.");
-        }
-        key = await importKeyFromBase64(storedKey);
-      }
-      
-      return await encryptData(data, key);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Encryption failed';
-      setError(errorMessage);
-      throw err;
+    if (!connected || !publicKey) {
+      throw new Error('Wallet not connected');
     }
-  }, [encryptionKey]);
 
-  const handleDecryptData = useCallback(async (encryptedData: any) => {
+    setIsLoading(true);
+    setError(null);
+
     try {
-      // Get the encryption key - either from state or localStorage
       let key = encryptionKey;
-      if (!key) {
-        const storedKey = localStorage.getItem(ENCRYPTION_KEY_STORAGE_KEY);
-        if (!storedKey) {
-          throw new Error("No encryption key available. Please connect your wallet and sign first.");
+
+      // If we don't have a key yet but we're initialized, retrieve it
+      if (!key && isInitialized) {
+        const storedData = getStoredEncryptionData();
+        if (storedData && storedData.encryptionKey) {
+          try {
+            // Import the key
+            key = await importKeyFromBase64(storedData.encryptionKey);
+            
+            // Log details about the key we're using
+            console.log('🔑 Using stored encryption key');
+            
+            setEncryptionKey(key);
+          } catch (keyError) {
+            console.error('Error importing stored key:', keyError);
+            // We'll generate a new key below
+          }
         }
-        key = await importKeyFromBase64(storedKey);
       }
-      
-      return await decryptData(encryptedData, key);
+
+      // If we still don't have a key, get one
+      if (!key) {
+        key = await handleSignMessage();
+      }
+
+      // Encrypt the data
+      const encryptedData = await encryptWithKey(data, key);
+      return encryptedData;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Decryption failed';
+      console.error('Encryption failed:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown encryption error';
       setError(errorMessage);
-      throw err;
+      throw new Error(`Encryption failed: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
     }
-  }, [encryptionKey]);
+  }, [connected, publicKey, encryptionKey, isInitialized, handleSignMessage]);
+
+  // Function to decrypt data with enhanced validation and debugging
+  const handleDecryptData = useCallback(async (encryptedData: EncryptedData) => {
+    if (!connected || !publicKey) {
+      throw new Error('Wallet not connected');
+    }
+
+    // Enhanced validation to prevent "Missing encrypted data" errors
+    if (!encryptedData) {
+      console.error('❌ No encrypted data provided to decryptData');
+      throw new Error('No encrypted data provided');
+    }
+    
+    if (!encryptedData.encrypted || encryptedData.encrypted === '') {
+      console.error('❌ Missing encrypted value in encryptedData:', encryptedData);
+      throw new Error('Missing encrypted value');
+    }
+    
+    if (!encryptedData.iv || encryptedData.iv === '') {
+      console.error('❌ Missing IV in encryptedData:', encryptedData);
+      throw new Error('Missing IV value');
+    }
+
+    // Log the encrypted data we're trying to decrypt
+    console.log('🔍 Attempting to decrypt data:', {
+      hasEncrypted: !!encryptedData.encrypted,
+      encryptedLength: encryptedData.encrypted?.length || 0,
+      hasIv: !!encryptedData.iv,
+      ivLength: encryptedData.iv?.length || 0,
+      encryptedSample: encryptedData.encrypted?.substring(0, 16) + '...',
+      ivSample: encryptedData.iv?.substring(0, 16) + '...'
+    });
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      let key = encryptionKey;
+
+      // If we don't have a key yet but we're initialized, retrieve it
+      if (!key && isInitialized) {
+        const storedData = getStoredEncryptionData();
+        if (storedData && storedData.encryptionKey) {
+          try {
+            // Import the key
+            key = await importKeyFromBase64(storedData.encryptionKey);
+            setEncryptionKey(key);
+          } catch (keyError) {
+            console.error('Error importing stored key:', keyError);
+            // We'll generate a new key below
+          }
+        }
+      }
+
+      // If we still don't have a key, get one
+      if (!key) {
+        key = await handleSignMessage();
+      }
+
+      // Decrypt the data
+      const decryptedData = await decryptWithKey(encryptedData, key);
+      return decryptedData;
+    } catch (err) {
+      console.error('Decryption failed:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown decryption error';
+      setError(errorMessage);
+      throw new Error(`Decryption failed: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [connected, publicKey, encryptionKey, isInitialized, handleSignMessage]);
 
   return {
-    isInitialized: checkIfInitialized(), // Always check real-time status
+    isInitialized,
+    isLoading,
+    error,
     handleSignMessage,
     encryptData: handleEncryptData,
-    decryptData: handleDecryptData,
-    error
+    decryptData: handleDecryptData
   };
 }
