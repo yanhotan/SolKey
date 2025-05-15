@@ -12,7 +12,7 @@ export function PaymentHistory() {
     {
       id: "INV-001",
       date: "May 1, 2023",
-      solAmount: "0.5 SOL",
+      solAmount: "0.095 SOL",
       usdcAmount: "20 USDC",
       usdEquivalent: "~$20.00",
       status: "paid",
@@ -25,7 +25,7 @@ export function PaymentHistory() {
     {
       id: "INV-002",
       date: "April 1, 2023",
-      solAmount: "0.48 SOL",
+      solAmount: "0.093 SOL",
       usdcAmount: "20 USDC",
       usdEquivalent: "~$20.00",
       status: "paid",
@@ -38,7 +38,7 @@ export function PaymentHistory() {
     {
       id: "INV-003",
       date: "March 1, 2023",
-      solAmount: "0.52 SOL",
+      solAmount: "0.092 SOL",
       usdcAmount: "20 USDC",
       usdEquivalent: "~$20.00",
       status: "paid",
@@ -51,7 +51,7 @@ export function PaymentHistory() {
     {
       id: "INV-004",
       date: "February 1, 2023",
-      solAmount: "0.55 SOL",
+      solAmount: "0.096 SOL",
       usdcAmount: "20 USDC",
       usdEquivalent: "~$20.00",
       status: "paid",
