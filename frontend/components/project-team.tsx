@@ -39,8 +39,8 @@ export function ProjectTeam({ id }: { id: string }) {
   const teamMembers = [
     {
       id: "1",
-      name: "John Doe",
-      email: "john@example.com",
+      name: "IShowSpeed",
+      email: "ishowspeed@example.com",
       role: "owner",
       avatar: "/images/no1_avatar.jpg",
       initials: "JD",

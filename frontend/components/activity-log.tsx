@@ -66,7 +66,7 @@ export function ActivityLog() {
       events: [
         {
           id: "3",
-          user: "John Doe",
+          user: "IShowSpeed",
           action: "Created project",
           project: "Backend API",
           time: "3:22 PM GMT+8",

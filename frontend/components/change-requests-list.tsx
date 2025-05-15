@@ -19,7 +19,7 @@ export function ChangeRequestsList() {
       title: "Update db credentials",
       description: "Update database credentials across all environments",
       status: "in-review",
-      author: "John Doe",
+      author: "IShowSpeed",
       createdAt: "2 days ago",
       environments: ["dev", "stg", "prd"],
       changes: 6,

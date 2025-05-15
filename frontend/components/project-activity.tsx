@@ -8,7 +8,7 @@ export function ProjectActivity({ id }: { id: string }) {
     {
       id: "1",
       user: {
-        name: "John Doe",
+        name: "IShowSpeed",
         avatar: "/placeholder.svg?height=32&width=32",
         initials: "JD",
       },
@@ -56,7 +56,7 @@ export function ProjectActivity({ id }: { id: string }) {
     {
       id: "5",
       user: {
-        name: "John Doe",
+        name: "IShowSpeed",
         avatar: "/placeholder.svg?height=32&width=32",
         initials: "JD",
       },
