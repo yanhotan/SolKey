@@ -264,6 +264,17 @@ async function addProjectMember(projectId, userId, role = "member") {
   }
 }
 
+async function getEnvironmentsByProjectId(projectId) {
+  const { data, error } = await supabase
+    .from("environments")
+    .select("*")
+    .eq("project_id", projectId)
+
+  if (error) throw error
+  return data
+}
+
+
 module.exports = {
   getAllProjects,
   getProjectById,
@@ -273,6 +284,7 @@ module.exports = {
   updateProject,
   deleteProject,
   addProjectMember,
+  getEnvironmentsByProjectId,
 };
 import * as projects from "./projects.js";
 

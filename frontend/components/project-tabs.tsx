@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ProjectTeam } from "@/components/project-team"
 import { ProjectActivity } from "@/components/project-activity"
 
-export function ProjectTabs({ id }: { id: string }) {
+export function ProjectTabs({ project }: { project: any }) {
   return (
     <Tabs defaultValue="secrets" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
@@ -16,10 +16,10 @@ export function ProjectTabs({ id }: { id: string }) {
         {/* Secrets content is rendered in ProjectDetail component */}
       </TabsContent>
       <TabsContent value="team" className="mt-6">
-        <ProjectTeam id={id} />
+        <ProjectTeam id={project.id} />
       </TabsContent>
       <TabsContent value="activity" className="mt-6">
-        <ProjectActivity id={id} />
+        <ProjectActivity id={project.id} />
       </TabsContent>
     </Tabs>
   )

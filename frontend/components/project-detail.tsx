@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Search, Plus, Eye, EyeOff, Copy, Download, Upload, Trash2, Lock, X } from "lucide-react"
-import { SecretsTable } from "@/components/secrets-table"
-import { SecretsEditor } from "@/components/secrets-editor"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Dialog,
@@ -121,12 +119,13 @@ export function ProjectDetail({ id }: { id: string }) {
   const [environments, setEnvironments] = useState<string[]>([])
   const [showEditor, setShowEditor] = useState(false)
 
-  useEffect(() => {
-    if (project.environments && project.environments.length > 0) {
-      setEnvironments(project.environments)
-      setCurrentEnvironment(project.environments[0])
-    }
-  }, [project.id, project.environments])
+useEffect(() => {
+  if (project.environments && project.environments.length > 0) {
+    setEnvironments(project.environments)
+    setCurrentEnvironment(project.environments[0])
+  }
+}, [project.id, JSON.stringify(project.environments)])
+
 
   const handleAddEnvironment = () => {
     if (newEnvName.trim() && !environments.includes(newEnvName.toLowerCase())) {
@@ -350,14 +349,14 @@ export function ProjectDetail({ id }: { id: string }) {
           </Button>
         </div>
 
-        {showEditor ? (
+        {/* {showEditor ? (
           <SecretsEditor environment={currentEnvironment} />
         ) : (
           <div className="mt-4">
             <h3 className="mb-4 font-medium">Active Secrets ({currentEnvironment})</h3>
             <SecretsTable environment={currentEnvironment} searchQuery={searchQuery} />
           </div>
-        )}
+        )} */}
       </div>
     </div>
   )

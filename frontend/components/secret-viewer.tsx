@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Button, Card, Typography, Alert, Space } from "antd";
-import { EyeOutlined, EyeInvisibleOutlined, KeyOutlined, CodeOutlined, LoadingOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { EyeOutlined, EyeInvisibleOutlined, KeyOutlined, CodeOutlined, LoadingOutlined, InfoCircleOutlined, LockOutlined } from "@ant-design/icons";
 import { api } from "../lib/api";
 
 const { Text, Paragraph } = Typography;
@@ -14,6 +14,34 @@ interface SecretViewerProps {
   type: string;
 }
 
+// Define the structure that matches the backend response
+interface SecretMetadata {
+  id: string;
+  name: string;
+  type: string;
+  projectName?: string;
+  environmentName?: string;
+}
+
+// This interface directly matches what the API client returns
+interface FlattenedEncryptedData {
+  // Secret info
+  id: string;
+  name: string;
+  type: string;
+  
+  // Secret encrypted data
+  encrypted_value: string;
+  iv: string;
+  auth_tag: string;
+  
+  // Key info
+  encrypted_aes_key: string;
+  nonce: string;
+  ephemeral_public_key: string;
+}
+
+// This interface matches what we need in the frontend
 interface EncryptedSecret {
   secret: {
     id: string;
@@ -44,6 +72,8 @@ export default function SecretViewer({
   const [detailedError, setDetailedError] = useState<any | null>(null);
   const [walletStatus, setWalletStatus] = useState<string>('');
   const [accessStatus, setAccessStatus] = useState<string | null>(null);
+  const [hasAccess, setHasAccess] = useState<boolean>(false);
+  const [signatureInProgress, setSignatureInProgress] = useState<boolean>(false);
   const { publicKey, signMessage, connected } = useWallet();
 
   // Check wallet connection status
@@ -59,71 +89,76 @@ export default function SecretViewer({
     }
   }, [connected, publicKey, signMessage]);
 
-  // Check if the current wallet has access to this secret
-  const checkSecretAccess = async () => {
-    if (!publicKey || !signMessage) {
-      setError("Wallet not connected or signing not available");
-      return false;
+  // Fetch metadata without requiring signature when wallet connects
+  useEffect(() => {
+    if (connected && publicKey) {
+      checkAccessWithoutSigning();
+      fetchEncryptedDataWithoutSignature();
     }
+  }, [connected, publicKey]);
 
+  // Check if the wallet has access without requiring signature
+  const checkAccessWithoutSigning = async () => {
+    if (!publicKey) return;
+    
     try {
       setIsCheckingAccess(true);
       setError(null);
-      setDetailedError(null);
-
-      // Sign the auth message
-      const message = new TextEncoder().encode("auth-to-decrypt");
-      let signature;
-      try {
-        signature = await signMessage(message);
-        console.log("Message signed successfully for access check");
-      } catch (signError) {
-        console.error("Error signing message for access check:", signError);
-        setError("Failed to sign the message with your wallet");
-        setDetailedError(signError);
-        return false;
-      }
       
-      const signatureBase64 = Buffer.from(signature).toString("base64");
-
-      try {
-        // Make an initial fetch attempt to check if we have access
-        await api.secrets.fetchEncrypted(secretId, {
-          walletAddress: publicKey.toBase58(),
-          signature: signatureBase64,
-        });
-        
-        setAccessStatus("You have access to this secret");
-        return true;
-      } catch (err) {
-        console.error("Access check failed:", err);
-        if (err instanceof Error && err.message.includes("Unauthorized")) {
-          setAccessStatus("Your wallet doesn't have access to this secret. You may need to be added as a project member.");
-        } else if (err instanceof Error && err.message.includes("multiple (or no) rows returned")) {
-          setAccessStatus("No encryption key found for your wallet. You need to be added as a project member to access this secret.");
-        } else {
-          setAccessStatus("Failed to verify access to this secret");
-        }
-        return false;
-      }
+      // Just fetch metadata to see if this wallet has access
+      // This doesn't require a signature
+      const response = await api.secrets.listMetadata(publicKey.toBase58());
+      
+      // Check if this secretId is in the list
+      const hasAccess = response.secrets?.some((secret: SecretMetadata) => secret.id === secretId) || false;
+      
+      setHasAccess(hasAccess);
+      setAccessStatus(hasAccess 
+        ? "You have access to this secret. Click Decrypt to view it." 
+        : "Your wallet doesn't have access to this secret.");
+      
+      return hasAccess;
     } catch (err) {
-      console.error("Access check error:", err);
-      setAccessStatus("Failed to check access");
+      console.error("Access check failed:", err);
+      setAccessStatus("Failed to verify access to this secret");
       return false;
     } finally {
       setIsCheckingAccess(false);
     }
   };
 
-  useEffect(() => {
-    if (connected && publicKey && signMessage) {
-      checkSecretAccess();
-    }
-  }, [connected, publicKey, signMessage]);
+  // Fetch encrypted data without requiring signature
+  const fetchEncryptedDataWithoutSignature = async () => {
+    if (!publicKey) return;
+    
+    try {
+      setIsFetchingEncrypted(true);
+      setError(null);
+      
+      // Fetch metadata to check access
+      const response = await api.secrets.listMetadata(publicKey.toBase58());
+      
+      // Check if this secretId is in the list
+      const hasAccess = response.secrets?.some((secret: SecretMetadata) => secret.id === secretId) || false;
+      
+      if (!hasAccess) {
+        console.log("User doesn't have access to this secret");
+        return;
+      }
+      
 
-  const handleFetchEncrypted = async () => {
-    if (!publicKey || !signMessage) {
-      setError("Wallet not connected or signing not available");
+      setHasAccess(true);
+    } catch (err) {
+      console.error("Fetching encrypted data without signature failed:", err);
+    } finally {
+      setIsFetchingEncrypted(false);
+    }
+  };
+
+  // Fetch the encrypted data without signature
+  const fetchEncryptedData = async () => {
+    if (!publicKey) {
+      setError("Wallet not connected");
       return;
     }
 
@@ -131,60 +166,50 @@ export default function SecretViewer({
       setIsFetchingEncrypted(true);
       setError(null);
       setDetailedError(null);
-
-      // Sign the auth message
-      const message = new TextEncoder().encode("auth-to-decrypt");
-      let signature;
-      try {
-        signature = await signMessage(message);
-        console.log("Message signed successfully");
-      } catch (signError) {
-        console.error("Error signing message:", signError);
-        setError("Failed to sign the message with your wallet");
-        setDetailedError(signError);
-        return;
-      }
       
-      const signatureBase64 = Buffer.from(signature).toString("base64");
-
-      // Fetch the encrypted data
+      // Fetch the encrypted data - no signature required
       console.log("Fetching encrypted data for secret:", { 
         secretId, 
-        walletAddress: publicKey.toBase58(),
-        signatureLength: signatureBase64.length 
+        walletAddress: publicKey.toBase58()
       });
       
-      const data = await api.secrets.fetchEncrypted(secretId, {
-        walletAddress: publicKey.toBase58(),
-        signature: signatureBase64,
-      });
+      const fetchedData = await api.secrets.fetchEncrypted(secretId, {
+        walletAddress: publicKey.toBase58()
+        // No signature required for fetching encrypted data
+      }) as FlattenedEncryptedData;
 
-      console.log("Encrypted data fetched successfully:", {
-        secretId,
-        dataReceived: !!data,
-        dataType: typeof data
-      });
-
-      setEncryptedData(data);
+      console.log("Encrypted data fetched successfully");
+      
+      // Convert the flattened data to the structured format we use in the component
+      const structuredData: EncryptedSecret = {
+        secret: {
+          id: fetchedData.id,
+          name: fetchedData.name,
+          type: fetchedData.type,
+          encrypted_value: fetchedData.encrypted_value,
+          iv: fetchedData.iv,
+          auth_tag: fetchedData.auth_tag
+        },
+        aesKeyInfo: {
+          encrypted_aes_key: fetchedData.encrypted_aes_key,
+          nonce: fetchedData.nonce,
+          ephemeral_public_key: fetchedData.ephemeral_public_key
+        }
+      };
+      
+      setEncryptedData(structuredData);
     } catch (err) {
-      console.error("Fetch encrypted error:", err);
-      const errorMsg = err instanceof Error ? err.message : "Failed to fetch encrypted secret";
+      console.error("Operation failed:", err);
+      const errorMsg = err instanceof Error ? err.message : "Operation failed";
       setError(errorMsg);
-      
-      // Add specific guidance for common errors
-      if (errorMsg.includes("multiple (or no) rows returned")) {
-        setError("No access key found for your wallet. You need to be added as a project member to access this secret.");
-      } else if (errorMsg.includes("Unauthorized")) {
-        setError("Your wallet is not authorized to access this secret.");
-      }
-      
       setDetailedError(err);
     } finally {
       setIsFetchingEncrypted(false);
     }
   };
 
-  const handleDecrypt = async () => {
+  // Decrypt the data
+  const decryptSecret = async () => {
     if (!publicKey || !signMessage) {
       setError("Wallet not connected or signing not available");
       return;
@@ -194,48 +219,104 @@ export default function SecretViewer({
       setIsLoading(true);
       setError(null);
       setDetailedError(null);
+      
+      // Prevent multiple concurrent signing operations
+      if (signatureInProgress) {
+        console.log("Signature already in progress, please wait");
+        return;
+      }
+      
+      setSignatureInProgress(true);
 
-      // Sign the auth message
+      // First check if we need to fetch the encrypted data
+      if (!encryptedData) {
+        // We need to fetch encrypted data first
+        await fetchEncryptedData();
+        if (!encryptedData) {
+          throw new Error("Failed to fetch encrypted data");
+        }
+      }
+      
+      // Check if encryption key exists in localStorage
+      const hasEncryptionKey = !!localStorage.getItem('solkey:encryption-key');
+      if (!hasEncryptionKey) {
+        console.log("Encryption key not found, initializing wallet encryption key before decryption");
+        try {
+          // First sign a message to derive the encryption key
+          const { SIGNATURE_MESSAGE } = await import("@/lib/wallet-auth");
+          const messageBytes = new TextEncoder().encode(SIGNATURE_MESSAGE);
+          
+          // Sign the message with wallet
+          console.log("Signing message to derive encryption key");
+          const keySignature = await signMessage(messageBytes);
+          console.log("Message signed successfully for key derivation");
+          
+          // Import necessary functions
+          const { deriveEncryptionKey } = await import("@/lib/wallet-auth");
+          const bs58 = await import('bs58');
+          
+          // Derive and store the encryption key locally
+          await deriveEncryptionKey(
+            SIGNATURE_MESSAGE,
+            bs58.default.encode(keySignature)
+          );
+          
+          console.log("Encryption key derived and stored successfully");
+          
+          // Verify the key was stored
+          if (!localStorage.getItem('solkey:encryption-key')) {
+            throw new Error("Encryption key was not properly stored after signing");
+          }
+        } catch (keyError) {
+          console.error("Failed to derive encryption key:", keyError);
+          setError("Failed to set up encryption: " + 
+            (keyError instanceof Error ? keyError.message : String(keyError)));
+          setSignatureInProgress(false);
+          return;
+        }
+      } else {
+        console.log("Using existing encryption key from localStorage");
+      }
+      
+      // Now sign message for auth
       const message = new TextEncoder().encode("auth-to-decrypt");
       let signature;
       try {
+        console.log("Signing message for decryption");
         signature = await signMessage(message);
         console.log("Message signed successfully for decryption");
       } catch (signError) {
         console.error("Error signing message for decryption:", signError);
-        setError("Failed to sign the message with your wallet");
+        if (signError instanceof Error && signError.message.includes('User rejected')) {
+          setError("You cancelled the signature request. The secret could not be decrypted.");
+        } else {
+          setError(`Failed to sign the message with your wallet: ${signError}`);
+        }
         setDetailedError(signError);
+        setSignatureInProgress(false);
         return;
+      } finally {
+        setSignatureInProgress(false);
       }
       
       const signatureBase64 = Buffer.from(signature).toString("base64");
-
-      console.log("Decrypting secret:", { 
-        secretId, 
-        walletAddress: publicKey.toBase58(),
-        signatureLength: signatureBase64.length 
-      });
-
-      // Get the secret using the API
+      
+      // Now decrypt
+      console.log("Decrypting secret:", { secretId });
       const data = await api.secrets.decrypt(secretId, {
         walletAddress: publicKey.toBase58(),
         signature: signatureBase64,
       });
 
-      console.log("Secret decrypted successfully:", {
-        secretId,
-        name: data.name,
-        type: data.type,
-        valueLength: data.value ? data.value.length : 0
-      });
+      console.log("Secret decrypted successfully");
 
       setSecretData({
         name: data.name,
         value: data.value
       });
     } catch (err) {
-      console.error("Decrypt error:", err);
-      const errorMsg = err instanceof Error ? err.message : "Failed to decrypt secret";
+      console.error("Decryption failed:", err);
+      const errorMsg = err instanceof Error ? err.message : "Decryption failed";
       setError(errorMsg);
       
       // Add specific guidance for common errors
@@ -243,6 +324,8 @@ export default function SecretViewer({
         setError("No access key found for your wallet. You need to be added as a project member to access this secret.");
       } else if (errorMsg.includes("Unauthorized")) {
         setError("Your wallet is not authorized to access this secret.");
+      } else if (errorMsg.includes("Encryption key not available")) {
+        setError("Authentication required. Please try decrypting again to sign with your wallet.");
       }
       
       setDetailedError(err);
@@ -282,11 +365,11 @@ export default function SecretViewer({
           </Text>
         </div>
         
-        {accessStatus && (
+        {accessStatus && !error && (
           <Alert
             message="Secret Access Status"
             description={accessStatus}
-            type={accessStatus.includes("have access") ? "success" : "warning"}
+            type={hasAccess ? "success" : "warning"}
             showIcon
             icon={<InfoCircleOutlined />}
             style={{ marginBottom: 16 }}
@@ -302,6 +385,7 @@ export default function SecretViewer({
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {secretData ? (
+            // Secret is decrypted - show the value with a hide button
             <>
               <Text code style={{ flex: 1 }}>
                 {secretData.value}
@@ -313,26 +397,36 @@ export default function SecretViewer({
                 Hide
               </Button>
             </>
+          ) : encryptedData ? (
+            // Encrypted data is loaded - show decrypt button
+            <Button
+              type="primary"
+              icon={<KeyOutlined />}
+              onClick={decryptSecret}
+              loading={isLoading}
+              disabled={!connected || !publicKey || !signMessage || signatureInProgress}
+              style={{ backgroundColor: "#1890ff" }}
+            >
+              Decrypt Secret
+            </Button>
+          ) : hasAccess ? (
+            // User has access but data not loaded yet - show fetch button
+            <Button
+              icon={<CodeOutlined />}
+              onClick={fetchEncryptedData}
+              loading={isFetchingEncrypted}
+              disabled={!connected || !publicKey || !signMessage || signatureInProgress}
+            >
+              Fetch Encrypted Data
+            </Button>
           ) : (
-            <Space>
-              <Button
-                type="primary"
-                icon={<EyeOutlined />}
-                onClick={handleDecrypt}
-                loading={isLoading}
-                disabled={!connected || !publicKey || !signMessage}
-              >
-                Decrypt Secret
-              </Button>
-              <Button
-                icon={<CodeOutlined />}
-                onClick={handleFetchEncrypted}
-                loading={isFetchingEncrypted}
-                disabled={!connected || !publicKey || !signMessage}
-              >
-                Fetch Encrypted
-              </Button>
-            </Space>
+            // User doesn't have confirmed access yet
+            <Button
+              icon={<LockOutlined />}
+              disabled={!connected || !publicKey}
+            >
+              No Access to Secret
+            </Button>
           )}
         </div>
 
