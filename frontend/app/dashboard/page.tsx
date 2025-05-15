@@ -1,12 +1,23 @@
-import type { Metadata } from "next"
-import { DashboardOverview } from "@/components/dashboard-overview"
-import { RecentActivity } from "@/components/recent-activity"
-import { QuickActions } from "@/components/quick-actions"
+import type { Metadata } from "next";
+import { DashboardOverview } from "@/components/dashboard-overview";
+import { RecentActivity } from "@/components/recent-activity";
+import { QuickActions } from "@/components/quick-actions";
+import { ProjectCards } from "@/components/project-cards";
+import { ProjectsHeader } from "@/components/projects-header";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EncryptionTest } from "@/components/encryption-test";
+import { WalletButton } from "@/components/wallet-button";
 
-export const metadata: Metadata = {
-  title: "Dashboard - SolSecrets",
-  description: "Manage your secrets and environment variables",
-}
+export default function DashboardPage() {
+//   const metadata: Metadata = {
+//     title: "Dashboard - SolSecrets",
+//     description: "Manage your secrets and environment variables",
+//   };
+
+   const metadata: Metadata = {
+    title: "Dashboard - SolSecrets",
+    description: "Manage your secrets and environment variables",
+   };
 
 export default function DashboardPage() {
   return (
@@ -23,5 +34,5 @@ export default function DashboardPage() {
         <RecentActivity />
       </div>
     </div>
-  )
+  );
 }

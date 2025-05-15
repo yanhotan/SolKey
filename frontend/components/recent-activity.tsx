@@ -5,7 +5,7 @@ export function RecentActivity() {
   const activities = [
     {
       user: {
-        name: "John Doe",
+        name: "IShowSpeed",
         avatar: "/placeholder.svg?height=32&width=32",
         initials: "JD",
       },

@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, Save } from "lucide-react"
 
 export function SettingsGeneral() {
-  const [fullName, setFullName] = useState("John Doe")
-  const [email, setEmail] = useState("john@example.com")
+  const [fullName, setFullName] = useState("IShowSpeed")
+  const [email, setEmail] = useState("ishowspeed@example.com")
   const [bio, setBio] = useState("Full-stack developer with a passion for Solana blockchain development.")
   const [timezone, setTimezone] = useState("UTC+8")
   const [isLoading, setIsLoading] = useState(false)

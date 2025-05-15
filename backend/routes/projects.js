@@ -23,45 +23,49 @@ const supabaseClient = createClient(
 router.get("/", async (req, res) => {
   try {
     const { walletAddress } = req.query;
-    
+
     // Build the query based on wallet address parameter
     let query = supabase
       .from("projects")
       .select("id, name, description, status");
-      
+
     // If wallet address is provided, filter projects by user membership
     if (walletAddress) {
       // Join with project_members to get only projects associated with this wallet
       query = supabase
         .from("projects")
-        .select(`
+        .select(
+          `
           id, 
           name, 
           description, 
           status,
           project_members!inner(wallet_address)
-        `)
+        `
+        )
         .eq("project_members.wallet_address", walletAddress);
     }
-    
+
     // Execute the query
-    const { data: projects, error } = await query.order("name", { ascending: true });
+    const { data: projects, error } = await query.order("name", {
+      ascending: true,
+    });
 
     if (error) {
       throw error;
     }
-    
+
     // Format for frontend
-    const formattedProjects = projects.map(project => ({
+    const formattedProjects = projects.map((project) => ({
       id: project.id,
       name: project.name,
-      description: project.description || '',
-      status: project.status
+      description: project.description || "",
+      status: project.status,
     }));
 
     // Format for frontend as expected
-    res.json({ 
-      projects: formattedProjects
+    res.json({
+      projects: formattedProjects,
     });
   } catch (error) {
     console.error("Error fetching projects:", error);
@@ -185,7 +189,7 @@ router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, status } = req.body;
-    
+
     if (!name) {
       return res.status(400).json({ error: "Project name is required" });
     }
@@ -217,10 +221,7 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { error } = await supabase
-      .from("projects")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("projects").delete().eq("id", id);
 
     if (error) {
       throw error;

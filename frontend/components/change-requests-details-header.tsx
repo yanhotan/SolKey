@@ -10,7 +10,7 @@ export function ChangeRequestHeader({ id }: { id: string }) {
     title: id === "CR-001" ? "Update db credentials" : `Change Request ${id}`,
     description: "Update database credentials across all environments",
     status: id === "CR-001" ? "in-review" : "pending",
-    author: "John Doe",
+    author: "IShowSpeed",
     createdAt: "2 days ago",
     environments: ["dev", "stg", "prd"],
     changes: 6,
