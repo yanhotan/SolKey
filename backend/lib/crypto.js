@@ -1,38 +1,68 @@
 const crypto = require("crypto");
-const { createClient } = require("@supabase/supabase-js");
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+const { PublicKey } = require("@solana/web3.js");
+const nacl = require("tweetnacl");
+const util = require("tweetnacl-util");
+const bs58 = require("bs58");
+const ed2curve = require("ed2curve");
+const convertPublicKey = ed2curve.convertPublicKey; 
+const convertSecretKey = ed2curve.convertSecretKey;
+const { supabase } = require("./supabase");
 
 // Constants
 const AES_KEY_SIZE = 32; // 256 bits
-const PBKDF2_ITERATIONS = 100000;
-const PBKDF2_KEYLEN = 32; // 256 bits
-const PBKDF2_DIGEST = "sha256";
 
 // Generate a random AES key
 function generateAESKey() {
   return crypto.randomBytes(AES_KEY_SIZE);
 }
 
-// Derive encryption key from wallet signature
-async function deriveKeyFromSignature(signature) {
-  return new Promise((resolve, reject) => {
-    crypto.pbkdf2(
-      signature,
-      "solsecure-salt", // You might want to make this configurable
-      PBKDF2_ITERATIONS,
-      PBKDF2_KEYLEN,
-      PBKDF2_DIGEST,
-      (err, derivedKey) => {
-        if (err) reject(err);
-        resolve(derivedKey);
-      }
+function encryptAESKeyForUser(aesKey, userPublicKeyBase58) {
+  try {
+    console.log("Encrypting AES key for wallet:", userPublicKeyBase58);
+    
+    // Convert Solana public key (base58) to bytes
+    let ed25519PublicKey;
+    try {
+      ed25519PublicKey = bs58.decode(userPublicKeyBase58);
+      console.log("Public key decoded successfully", { 
+        length: ed25519PublicKey.length, 
+        type: typeof ed25519PublicKey,
+        isBuffer: Buffer.isBuffer(ed25519PublicKey)
+      });
+    } catch (decodeError) {
+      console.error("bs58 decode error:", decodeError);
+      throw new Error(`Failed to decode public key: ${decodeError.message}`);
+    }
+    
+    if (!ed25519PublicKey || ed25519PublicKey.length !== 32) {
+      throw new Error(`Invalid public key format or length: ${ed25519PublicKey?.length}`);
+    }
+
+    // Convert Ed25519 public key to X25519
+    const x25519PublicKey = convertPublicKey(ed25519PublicKey);
+    if (!x25519PublicKey) throw new Error("Invalid public key conversion to X25519");
+
+    // Generate ephemeral keypair
+    const ephemeralKeypair = nacl.box.keyPair();
+
+    // Derive shared secret (ECDH)
+    const nonce = nacl.randomBytes(nacl.box.nonceLength);
+    const encryptedAESKey = nacl.box(
+      aesKey,
+      nonce,
+      x25519PublicKey,
+      ephemeralKeypair.secretKey
     );
-  });
+
+    return {
+      encryptedAESKey: util.encodeBase64(encryptedAESKey),
+      nonce: util.encodeBase64(nonce),
+      ephemeralPublicKey: util.encodeBase64(ephemeralKeypair.publicKey),
+    };
+  } catch (error) {
+    console.error("AES key encryption error:", error);
+    throw new Error(`Failed to encrypt AES key: ${error.message}`);
+  }
 }
 
 // Encrypt data with AES
@@ -40,8 +70,8 @@ function encryptWithAES(data, key) {
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
 
-  let encrypted = cipher.update(data, "utf8", "hex");
-  encrypted += cipher.final("hex");
+  let encrypted = cipher.update(data, "utf8", "base64");
+  encrypted += cipher.final("base64");
 
   const authTag = cipher.getAuthTag();
 
@@ -54,18 +84,57 @@ function encryptWithAES(data, key) {
 
 // Decrypt data with AES
 function decryptWithAES(encryptedData, key, iv, authTag) {
-  const decipher = crypto.createDecipheriv(
-    "aes-256-gcm",
-    key,
-    Buffer.from(iv, "hex")
-  );
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(authTag);
 
-  decipher.setAuthTag(Buffer.from(authTag, "hex"));
-
-  let decrypted = decipher.update(encryptedData, "hex", "utf8");
+  let decrypted = decipher.update(encryptedData, "base64", "utf8");
   decrypted += decipher.final("utf8");
 
   return decrypted;
+}
+
+function decryptAESKeyForUser(
+  encryptedAESKeyBase64,
+  nonceBase64,
+  ephemeralPublicKeyBase64,
+  userPrivateKeyBase58
+) {
+  try {
+    // Convert Solana private key (base58) to bytes
+    let ed25519PrivateKey;
+    try {
+      ed25519PrivateKey = bs58.decode(userPrivateKeyBase58);
+    } catch (decodeError) {
+      console.error("bs58 decode error:", decodeError);
+      throw new Error(`Failed to decode private key: ${decodeError.message}`);
+    }
+
+    // Convert Ed25519 private key to X25519
+    const x25519PrivateKey = convertSecretKey(ed25519PrivateKey);
+    if (!x25519PrivateKey) throw new Error("Invalid private key conversion");
+
+    // Convert base64 strings to Uint8Arrays
+    const encryptedAESKey = util.decodeBase64(encryptedAESKeyBase64);
+    const nonce = util.decodeBase64(nonceBase64);
+    const ephemeralPublicKey = util.decodeBase64(ephemeralPublicKeyBase64);
+
+    // Decrypt the AES key using Box.open
+    const decryptedAESKey = nacl.box.open(
+      encryptedAESKey,
+      nonce,
+      ephemeralPublicKey,
+      x25519PrivateKey
+    );
+
+    if (!decryptedAESKey) {
+      throw new Error("Failed to decrypt AES key");
+    }
+
+    return decryptedAESKey;
+  } catch (error) {
+    console.error("AES key decryption error:", error);
+    throw new Error(`Failed to decrypt AES key: ${error.message}`);
+  }
 }
 
 // Create a new secret
@@ -75,32 +144,35 @@ async function createSecret(
   name,
   value,
   type,
-  creatorSignature,
-  creatorUserId
+  creatorWalletAddress
 ) {
   try {
-    // Generate random AES key for the secret
-    const secretKey = generateAESKey();
+    console.log("Creating secret:", { 
+      projectId, 
+      environmentId, 
+      name, 
+      valueLength: value?.length, 
+      type,
+      creatorWalletAddress
+    });
+    
+    // Generate random AES key
+    const secretKey = crypto.randomBytes(32); // 256-bit AES key
 
-    // Encrypt the secret value
+    // Encrypt secret data with AES
     const encryptedSecret = encryptWithAES(value, secretKey);
 
-    // Get all project members
+    // Get project members
     const { data: members, error: membersError } = await supabase
       .from("project_members")
-      .select("user_id")
+      .select("wallet_address")
       .eq("project_id", projectId);
 
     if (membersError) throw membersError;
+    
+    console.log(`Found ${members.length} project members to encrypt for`);
 
-    // First, encrypt the secret key for the creator
-    const creatorDerivedKey = await deriveKeyFromSignature(creatorSignature);
-    const creatorEncryptedKey = encryptWithAES(
-      secretKey.toString("hex"),
-      creatorDerivedKey
-    );
-
-    // Store the secret
+    // Store the secret data (encrypted value)
     const { data: secret, error: secretError } = await supabase
       .from("secrets")
       .insert([
@@ -108,7 +180,7 @@ async function createSecret(
           project_id: projectId,
           environment_id: environmentId,
           name,
-          value: encryptedSecret.encrypted,
+          encrypted_value: encryptedSecret.encrypted,
           type,
           iv: encryptedSecret.iv,
           auth_tag: encryptedSecret.authTag,
@@ -118,34 +190,43 @@ async function createSecret(
       .single();
 
     if (secretError) throw secretError;
+    
+    console.log("Secret data stored successfully with ID:", secret.id);
 
-    // Store creator's encrypted key
-    const { error: creatorKeyError } = await supabase
-      .from("secret_keys")
-      .insert([
-        {
-          secret_id: secret.id,
-          user_id: creatorUserId,
-          encrypted_key: creatorEncryptedKey.encrypted,
-          iv: creatorEncryptedKey.iv,
-          auth_tag: creatorEncryptedKey.authTag,
-        },
-      ]);
+    // Encrypt AES key for each member
+    for (const member of members) {
+      console.log(`Encrypting for member: ${member.wallet_address}`);
+      const { encryptedAESKey, nonce, ephemeralPublicKey } =
+        encryptAESKeyForUser(secretKey, member.wallet_address);
 
-    if (creatorKeyError) throw creatorKeyError;
+      // Store encrypted AES key for this member
+      const { error: keyStoreError } = await supabase
+        .from("secret_keys")
+        .insert([
+          {
+            secret_id: secret.id,
+            wallet_address: member.wallet_address,
+            encrypted_aes_key: encryptedAESKey,
+            nonce: nonce,
+            ephemeral_public_key: ephemeralPublicKey,
+          },
+        ]);
+
+      if (keyStoreError) throw keyStoreError;
+    }
 
     return {
       ...secret,
-      message:
-        "Secret created. Other project members will need to provide their signatures to access this secret.",
+      message: "Secret created securely with E2EE",
     };
   } catch (error) {
+    console.error("Secret creation error:", error);
     throw new Error(`Failed to create secret: ${error.message}`);
   }
 }
 
-// Get and decrypt a secret
-async function getSecret(secretId, userSignature) {
+// Get a secret
+async function getSecret(secretId, walletAddress) {
   try {
     // Get the secret
     const { data: secret, error: secretError } = await supabase
@@ -156,108 +237,85 @@ async function getSecret(secretId, userSignature) {
 
     if (secretError) throw secretError;
 
-    // Get the user's encrypted key
+    // Get the user's encrypted AES key
     const { data: keyData, error: keyError } = await supabase
       .from("secret_keys")
       .select("*")
       .eq("secret_id", secretId)
+      .eq("wallet_address", walletAddress)
       .single();
 
     if (keyError) throw keyError;
 
-    // Derive user's key from signature
-    const derivedKey = await deriveKeyFromSignature(userSignature);
-
-    // Decrypt the secret key
-    const secretKey = decryptWithAES(
-      keyData.encrypted_key,
-      derivedKey,
-      keyData.iv,
-      keyData.auth_tag
-    );
-
-    // Decrypt the secret value
-    const decryptedValue = decryptWithAES(
-      secret.value,
-      Buffer.from(secretKey, "hex"),
-      secret.iv,
-      secret.auth_tag
-    );
-
+    // Return only the encrypted data
     return {
-      ...secret,
-      value: decryptedValue,
+      id: secret.id,
+      name: secret.name,
+      encrypted_value: secret.encrypted_value,
+      type: secret.type,
+      iv: secret.iv,
+      auth_tag: secret.auth_tag,
+      created_at: secret.created_at,
+      updated_at: secret.updated_at,
+      project_id: secret.project_id,
+      environment_id: secret.environment_id,
+      encrypted_aes_key: keyData.encrypted_aes_key,
+      nonce: keyData.nonce,
+      ephemeral_public_key: keyData.ephemeral_public_key,
     };
   } catch (error) {
+    console.error("Get secret error:", error);
     throw new Error(`Failed to get secret: ${error.message}`);
   }
 }
 
-// Add a new function to share the secret with another user
+// Share a secret with another user
 async function shareSecret(
   secretId,
-  targetUserId,
-  targetSignature,
-  creatorSignature
+  targetWalletAddress,
+  creatorWalletAddress
 ) {
   try {
-    // Get the secret
+    // Verify the target user is a project member
     const { data: secret, error: secretError } = await supabase
       .from("secrets")
-      .select("*")
+      .select("project_id")
       .eq("id", secretId)
       .single();
 
     if (secretError) throw secretError;
 
-    // Verify the user is a project member
     const { data: member, error: memberError } = await supabase
       .from("project_members")
-      .select("user_id")
+      .select("wallet_address")
       .eq("project_id", secret.project_id)
-      .eq("user_id", targetUserId)
+      .eq("wallet_address", targetWalletAddress)
       .single();
 
     if (memberError || !member) {
       throw new Error("User is not a member of this project");
     }
 
-    // Get the creator's encrypted key
+    // Get the creator's encrypted AES key
     const { data: creatorKey, error: creatorKeyError } = await supabase
       .from("secret_keys")
       .select("*")
       .eq("secret_id", secretId)
+      .eq("wallet_address", creatorWalletAddress)
       .single();
 
     if (creatorKeyError) throw creatorKeyError;
 
-    // Derive key from creator's signature to decrypt the secret key
-    const creatorDerivedKey = await deriveKeyFromSignature(creatorSignature);
-
-    // Decrypt the secret key using creator's derived key
-    const rawSecretKey = decryptWithAES(
-      creatorKey.encrypted_key,
-      creatorDerivedKey,
-      creatorKey.iv,
-      creatorKey.auth_tag
-    );
-
-    // Derive key from target user's signature
-    const targetDerivedKey = await deriveKeyFromSignature(targetSignature);
-
-    // Encrypt the raw secret key for the target user
-    const targetEncryptedKey = encryptWithAES(rawSecretKey, targetDerivedKey);
-
-    // Store the target user's encrypted key
+    // Store the AES key for the target user
     const { error: targetKeyError } = await supabase
       .from("secret_keys")
       .insert([
         {
           secret_id: secretId,
-          user_id: targetUserId,
-          encrypted_key: targetEncryptedKey.encrypted,
-          iv: targetEncryptedKey.iv,
-          auth_tag: targetEncryptedKey.authTag,
+          wallet_address: targetWalletAddress,
+          encrypted_aes_key: creatorKey.encrypted_aes_key,
+          nonce: creatorKey.nonce,
+          ephemeral_public_key: creatorKey.ephemeral_public_key,
         },
       ]);
 
@@ -265,6 +323,7 @@ async function shareSecret(
 
     return { message: "Secret shared successfully" };
   } catch (error) {
+    console.error("Share secret error:", error);
     throw new Error(`Failed to share secret: ${error.message}`);
   }
 }
@@ -273,5 +332,7 @@ module.exports = {
   createSecret,
   getSecret,
   shareSecret,
-  deriveKeyFromSignature,
+  decryptWithAES,
+  decryptAESKeyForUser,
+  encryptAESKeyForUser,
 };

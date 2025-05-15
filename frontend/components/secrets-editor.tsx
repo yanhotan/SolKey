@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Textarea } from "@/components/ui/textarea"
-import { Lock, Save, AlertCircle, Shield } from "lucide-react"
+import { Lock, Save, AlertCircle, Shield, Eye, EyeOff } from "lucide-react"
 import { encryptData, decryptData } from "@/lib/wallet-auth"
 import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
 import type { EncryptedData } from "@/lib/crypto"
@@ -24,6 +24,7 @@ export function SecretsEditor({ environment }: { environment: string }) {
   const [newValue, setNewValue] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({})
   const { isInitialized, encryptData, decryptData } = useWalletEncryption()
 
   const addSecret = async () => {
@@ -34,6 +35,15 @@ export function SecretsEditor({ environment }: { environment: string }) {
 
     if (!newKey.trim() || !newValue.trim()) {
       setError("Both key and value are required")
+      return
+    }
+
+    // Check for sensitive keys
+    const sensitiveKeys = ['DATABASE_URL', 'DB_URL', 'DATABASE', 'DB', 'URL', 'PASSWORD', 'SECRET', 'KEY']
+    const isSensitive = sensitiveKeys.some(key => newKey.toUpperCase().includes(key))
+    
+    if (isSensitive) {
+      setError("This key name contains sensitive information. Please use a more specific name.")
       return
     }
 
@@ -64,9 +74,20 @@ export function SecretsEditor({ environment }: { environment: string }) {
     }
   }
 
-  const viewSecret = async (encryptedValue: EncryptedData) => {
+  const toggleSecretVisibility = (id: string) => {
+    setVisibleSecrets(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }))
+  }
+
+  const viewSecret = async (encryptedValue: EncryptedData, id: string) => {
     if (!isInitialized) {
       return "**Please connect your wallet**"
+    }
+
+    if (!visibleSecrets[id]) {
+      return "••••••••••••••••••••••••••"
     }
 
     try {
@@ -109,7 +130,7 @@ export function SecretsEditor({ environment }: { environment: string }) {
             <Label htmlFor="secret-key">Secret Key</Label>
             <Input
               id="secret-key"
-              placeholder="e.g., API_KEY, DATABASE_URL"
+              placeholder="e.g., API_KEY, CONFIG_VALUE"
               value={newKey}
               onChange={(e) => setNewKey(e.target.value)}
             />
@@ -145,11 +166,26 @@ export function SecretsEditor({ environment }: { environment: string }) {
             <div className="space-y-4">
               {secrets.map((secret) => (
                 <div key={secret.id} className="rounded-lg border p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Lock className="h-4 w-4 text-purple-500" />
-                    <span className="font-medium">{secret.key}</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-purple-500" />
+                      <span className="font-medium">{secret.key}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => toggleSecretVisibility(secret.id)}
+                    >
+                      {visibleSecrets[secret.id] ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
-                  <div className="font-mono text-sm bg-muted p-2 rounded">{viewSecret(secret.encryptedValue)}</div>
+                  <div className="font-mono text-sm bg-muted p-2 rounded">
+                    {viewSecret(secret.encryptedValue, secret.id)}
+                  </div>
                 </div>
               ))}
             </div>

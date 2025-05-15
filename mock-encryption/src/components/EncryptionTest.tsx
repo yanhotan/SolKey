@@ -12,7 +12,7 @@ import {
   HStack,
   Badge
 } from '@chakra-ui/react';
-import * as bs58 from 'bs58';
+import base58 from 'bs58';
 import type { EncryptedData } from '../utils/crypto';
 import { 
   deriveEncryptionKey, 
@@ -76,8 +76,8 @@ export const EncryptionTest: FC = () => {
       }
 
       const messageBytes = new TextEncoder().encode(TEST_MESSAGE);
-      const signatureBytes = await signMessage(messageBytes);
-      const signatureString = bs58.encode(signatureBytes);
+      const signatureBytes = await signMessage(messageBytes);      
+      const signatureString = base58.encode(signatureBytes);
       setSignature(signatureString);
 
       // Derive encryption key
@@ -169,7 +169,7 @@ export const EncryptionTest: FC = () => {
       // Sign the message again
       const messageBytes = new TextEncoder().encode(TEST_MESSAGE);
       const newSignatureBytes = await signMessage(messageBytes);
-      const newSignatureString = bs58.encode(newSignatureBytes);
+      const newSignatureString = base58.encode(newSignatureBytes);
       
       // Derive a new key
       const newKey = await deriveEncryptionKey(TEST_MESSAGE, newSignatureString);

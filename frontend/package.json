@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.0.0",
     "@emotion/is-prop-valid": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@noble/hashes": "latest",
@@ -44,6 +45,7 @@
     "@solana/wallet-adapter-react-ui": "^0.9.38",
     "@solana/wallet-adapter-wallets": "^0.19.36",
     "@solana/web3.js": "^1.98.2",
+    "antd": "^5.25.1",
     "autoprefixer": "^10.4.20",
     "bs58": "^6.0.0",
     "class-variance-authority": "^0.7.1",

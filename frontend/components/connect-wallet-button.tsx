@@ -16,20 +16,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export function ConnectWalletButton() {
   const { connected, disconnect, publicKey, select, wallet } = useWallet()
   const [showDialog, setShowDialog] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   
-  // Function to shorten the wallet address
   const shortenAddress = (address: string) => {
     if (!address) return ""
     return `${address.slice(0, 4)}...${address.slice(-4)}`
   }
-  const [error, setError] = useState<string | null>(null)
 
-  // Type-safe wallet selection
+  useEffect(() => {
+    if (connected) {
+      setShowDialog(false)
+    }
+  }, [connected])
+
   const connectWallet = async (name: "Phantom" | "Solflare") => {
     setError(null)
     try {
@@ -72,7 +76,7 @@ export function ConnectWalletButton() {
     }
   }
 
-  // If connected, show disconnect button outside of Dialog
+  // Show connected state with disconnect button
   if (connected && publicKey) {
     return (
       <Button 
@@ -90,16 +94,21 @@ export function ConnectWalletButton() {
     )
   }
 
-  // When not connected, show simple connect button that opens dialog when clicked
+  // Show connect button with wallet selection dialog
   return (
     <Dialog open={showDialog} onOpenChange={setShowDialog}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-2"
+          onClick={() => setShowDialog(true)} // Explicitly handle click
+        >
           <Wallet className="h-4 w-4" />
           Connect Wallet
         </Button>
       </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Connect your wallet</DialogTitle>
           <DialogDescription>
