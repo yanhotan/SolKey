@@ -5,7 +5,7 @@ const {
   getSecret,
   shareSecret,
   decryptWithAES,
-  decryptAESKeyForUser
+  decryptAESKeyForUser,
 } = require("../lib/crypto");
 const nacl = require("tweetnacl");
 const { PublicKey } = require("@solana/web3.js");
@@ -40,7 +40,7 @@ router.get("/", async (req, res) => {
     }
 
     // Get the secret IDs
-    const secretIds = secretKeys.map(key => key.secret_id);
+    const secretIds = secretKeys.map((key) => key.secret_id);
 
     // Get all secrets details
     const { data: secrets, error: secretsError } = await supabase
@@ -54,7 +54,7 @@ router.get("/", async (req, res) => {
     }
 
     // Get project info for each secret
-    const projectIds = [...new Set(secrets.map(s => s.project_id))];
+    const projectIds = [...new Set(secrets.map((s) => s.project_id))];
     const { data: projects, error: projectsError } = await supabase
       .from("projects")
       .select("id, name")
@@ -68,13 +68,13 @@ router.get("/", async (req, res) => {
     // Map project names to secrets
     const projectMap = {};
     if (projects) {
-      projects.forEach(p => {
+      projects.forEach((p) => {
         projectMap[p.id] = p.name;
       });
     }
 
     // Get environment info for each secret
-    const envIds = [...new Set(secrets.map(s => s.environment_id))];
+    const envIds = [...new Set(secrets.map((s) => s.environment_id))];
     const { data: environments, error: envsError } = await supabase
       .from("environments")
       .select("id, name")
@@ -88,18 +88,18 @@ router.get("/", async (req, res) => {
     // Map environment names to secrets
     const envMap = {};
     if (environments) {
-      environments.forEach(e => {
+      environments.forEach((e) => {
         envMap[e.id] = e.name;
       });
     }
 
     // Combine all data
-    const secretsWithDetails = secrets.map(secret => ({
+    const secretsWithDetails = secrets.map((secret) => ({
       id: secret.id,
       name: secret.name,
       type: secret.type,
       projectName: projectMap[secret.project_id] || "Unknown Project",
-      environmentName: envMap[secret.environment_id] || "Unknown Environment"
+      environmentName: envMap[secret.environment_id] || "Unknown Environment",
     }));
 
     res.json({ secrets: secretsWithDetails });
@@ -112,33 +112,42 @@ router.get("/", async (req, res) => {
 // Create a new secret
 router.post("/", async (req, res) => {
   try {
-    const { 
-      name, 
-      type, 
-      encrypted_value, 
-      iv, 
-      project_id, 
-      environment_id, 
+    const {
+      name,
+      type,
+      encrypted_value,
+      iv,
+      project_id,
+      environment_id,
       wallet_address,
       encrypted_aes_key,
       nonce,
-      ephemeral_public_key
+      ephemeral_public_key,
     } = req.body;
 
     // Validate required fields
-    if (!name || !type || !encrypted_value || !iv || !wallet_address || !project_id || !environment_id) {
-      return res.status(400).json({ 
+    if (
+      !name ||
+      !type ||
+      !encrypted_value ||
+      !iv ||
+      !wallet_address ||
+      !project_id ||
+      !environment_id
+    ) {
+      return res.status(400).json({
         error: "Missing required fields",
-        required: "name, type, encrypted_value, iv, wallet_address, project_id, environment_id" 
+        required:
+          "name, type, encrypted_value, iv, wallet_address, project_id, environment_id",
       });
     }
-    
+
     console.log(`Creating secret '${name}' for wallet ${wallet_address}`, {
       type,
       project_id,
-      environment_id
+      environment_id,
     });
-    
+
     // The data is already encrypted by the frontend, so we just store it
     const { data: secret, error: secretError } = await supabase
       .from("secrets")
@@ -159,36 +168,101 @@ router.post("/", async (req, res) => {
       console.error("Error creating secret:", secretError);
       throw secretError;
     }
-    
+
     console.log(`Secret created with ID: ${secret.id}`);
-    
+
     // Create a record in secret_keys to track access
-    const { error: keyError } = await supabase
-      .from("secret_keys")
-      .insert([
-        {
-          secret_id: secret.id,
-          wallet_address,
-          encrypted_aes_key: encrypted_aes_key || 'frontend-encrypted',
-          nonce: nonce || 'frontend-encrypted',
-          ephemeral_public_key: ephemeral_public_key || 'frontend-encrypted',
-        },
-      ]);
+    const { error: keyError } = await supabase.from("secret_keys").insert([
+      {
+        secret_id: secret.id,
+        wallet_address,
+        encrypted_aes_key: encrypted_aes_key || "frontend-encrypted",
+        nonce: nonce || "frontend-encrypted",
+        ephemeral_public_key: ephemeral_public_key || "frontend-encrypted",
+      },
+    ]);
 
     if (keyError) {
       console.error("Error creating secret_key access:", keyError);
       throw keyError;
     }
 
-    res.status(201).json({ 
+    res.status(201).json({
       id: secret.id,
       name: secret.name,
       type: secret.type,
       project_id: secret.project_id,
-      environment_id: secret.environment_id
+      environment_id: secret.environment_id,
     });
   } catch (error) {
     console.error("Error creating secret:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get secrets by project and environment ID (no wallet required)
+router.get("/by-project", async (req, res) => {
+  try {
+    const { project_id, environment_id } = req.query;
+    console.log("Received request to /by-project with params:", {
+      project_id,
+      environment_id,
+    });
+
+    if (!project_id) {
+      console.log("Missing required parameter: project_id");
+      return res.status(400).json({
+        error: "Project ID is required",
+      });
+    }
+
+    // Handle comma-separated environment IDs
+    const environmentIds = environment_id
+      ? environment_id.split(",").map((id) => id.trim())
+      : [];
+
+    console.log(
+      "Fetching secrets for project:",
+      project_id,
+      "environments:",
+      environmentIds
+    );
+
+    // Build the query
+    let query = supabase
+      .from("secrets")
+      .select("*")
+      .eq("project_id", project_id);
+
+    // Add environment filter if environment IDs are provided
+    if (environmentIds.length > 0) {
+      query = query.in("environment_id", environmentIds);
+    }
+
+    // Execute the query
+    const { data: secrets, error: secretsError } = await query;
+
+    if (secretsError) {
+      console.error("Error fetching secrets:", secretsError);
+      throw secretsError;
+    }
+
+    console.log(`Found ${secrets?.length || 0} secrets`);
+
+    // Return the secrets with encrypted values
+    res.json({
+      secrets: secrets.map((secret) => ({
+        id: secret.id,
+        name: secret.name,
+        type: secret.type,
+        encrypted_value: secret.encrypted_value,
+        iv: secret.iv,
+        project_id: secret.project_id,
+        environment_id: secret.environment_id,
+      })),
+    });
+  } catch (error) {
+    console.error("Error in get secrets by project:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -214,8 +288,10 @@ router.get("/:id", async (req, res) => {
       .single();
 
     if (secretKeyError) {
-      if (secretKeyError.code === 'PGRST116') {
-        return res.status(403).json({ error: "You don't have access to this secret" });
+      if (secretKeyError.code === "PGRST116") {
+        return res
+          .status(403)
+          .json({ error: "You don't have access to this secret" });
       }
       throw secretKeyError;
     }
@@ -242,7 +318,7 @@ router.get("/:id", async (req, res) => {
       environment_id: secret.environment_id,
       encrypted_aes_key: secretKey.encrypted_aes_key,
       nonce: secretKey.nonce,
-      ephemeral_public_key: secretKey.ephemeral_public_key
+      ephemeral_public_key: secretKey.ephemeral_public_key,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -271,7 +347,7 @@ router.post("/:id/share", async (req, res) => {
 });
 
 // Decrypt and show secret value
-router.post('/:id/decrypt', async (req, res) => {
+router.post("/:id/decrypt", async (req, res) => {
   try {
     const { id } = req.params;
     const { walletAddress, signature } = req.body;
@@ -304,11 +380,13 @@ router.post('/:id/decrypt', async (req, res) => {
         console.error("Invalid signature provided for wallet", walletAddress);
         return res.status(401).json({ error: "Invalid signature" });
       }
-      
+
       console.log("Signature verified successfully");
     } catch (error) {
       console.error("Signature verification error:", error);
-      return res.status(401).json({ error: `Signature verification error: ${error.message}` });
+      return res
+        .status(401)
+        .json({ error: `Signature verification error: ${error.message}` });
     }
 
     // Step 2: Check if user has access to this secret (has an encrypted key)
@@ -322,8 +400,10 @@ router.post('/:id/decrypt', async (req, res) => {
 
     if (secretKeyError) {
       console.error("Error fetching secret key access:", secretKeyError);
-      if (secretKeyError.code === 'PGRST116') {
-        return res.status(403).json({ error: "You don't have access to this secret" });
+      if (secretKeyError.code === "PGRST116") {
+        return res
+          .status(403)
+          .json({ error: "You don't have access to this secret" });
       }
       throw secretKeyError;
     }
@@ -352,14 +432,14 @@ router.post('/:id/decrypt', async (req, res) => {
       iv: secret.iv,
       name: secret.name,
       type: secret.type,
-      
-      // Key data 
+
+      // Key data
       encrypted_aes_key: secretKey.encrypted_aes_key,
-      nonce: secretKey.nonce, 
-      ephemeral_public_key: secretKey.ephemeral_public_key
+      nonce: secretKey.nonce,
+      ephemeral_public_key: secretKey.ephemeral_public_key,
     });
   } catch (error) {
-    console.error('Error processing decrypt request:', error);
+    console.error("Error processing decrypt request:", error);
     return res.status(500).json({ error: error.message });
   }
 });
@@ -376,7 +456,7 @@ router.post("/:id/fetchEncrypted", async (req, res) => {
     }
 
     console.log(`Fetching encrypted data for secret ${id}`);
-    
+
     // Signature is no longer required for fetching encrypted data
     // We only need to check if the wallet has access to this secret
 
@@ -389,8 +469,10 @@ router.post("/:id/fetchEncrypted", async (req, res) => {
       .single();
 
     if (secretKeyError) {
-      if (secretKeyError.code === 'PGRST116') {
-        return res.status(403).json({ error: "You don't have access to this secret" });
+      if (secretKeyError.code === "PGRST116") {
+        return res
+          .status(403)
+          .json({ error: "You don't have access to this secret" });
       }
       throw secretKeyError;
     }
@@ -417,10 +499,10 @@ router.post("/:id/fetchEncrypted", async (req, res) => {
       environment_id: secret.environment_id,
       encrypted_aes_key: secretKey.encrypted_aes_key,
       nonce: secretKey.nonce,
-      ephemeral_public_key: secretKey.ephemeral_public_key
+      ephemeral_public_key: secretKey.ephemeral_public_key,
     });
   } catch (error) {
-    console.error('Error fetching encrypted data:', error);
+    console.error("Error fetching encrypted data:", error);
     return res.status(500).json({ error: error.message });
   }
 });
@@ -483,9 +565,9 @@ router.post("/:id/diagnostic", async (req, res) => {
       });
     } catch (error) {
       console.error("Failed to get secret data:", error);
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: `Secret retrieval failed: ${error.message}`,
-        step: "database_fetch"
+        step: "database_fetch",
       });
     }
 
@@ -506,20 +588,21 @@ router.post("/:id/diagnostic", async (req, res) => {
 
       console.log("Signature verification result:", isValid);
       if (!isValid) {
-        return res.status(401).json({ 
+        return res.status(401).json({
           error: "Invalid signature",
-          step: "signature_verification" 
+          step: "signature_verification",
         });
       }
     } catch (error) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: `Signature verification error: ${error.message}`,
-        step: "signature_verification"
+        step: "signature_verification",
       });
     }
 
     return res.json({
-      message: "Diagnostic successful - Signature verified and data access confirmed",
+      message:
+        "Diagnostic successful - Signature verified and data access confirmed",
       secretInfo: {
         id: secret.id,
         name: secret.name,
@@ -529,13 +612,13 @@ router.post("/:id/diagnostic", async (req, res) => {
         nonceLength: secretKey.nonce?.length || 0,
         ephemeralPublicKeyLength: secretKey.ephemeral_public_key?.length || 0,
       },
-      signatureVerified: true
+      signatureVerified: true,
     });
   } catch (error) {
     console.error("Diagnostic error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: `Diagnostic failed: ${error.message}`,
-      step: "unknown"
+      step: "unknown",
     });
   }
 });
@@ -569,7 +652,7 @@ router.get("/metadata", async (req, res) => {
     }
 
     // Get the secret IDs
-    const secretIds = secretKeys.map(key => key.secret_id);
+    const secretIds = secretKeys.map((key) => key.secret_id);
 
     // Get all secrets basic metadata
     const { data: secrets, error: secretsError } = await supabase
@@ -583,7 +666,7 @@ router.get("/metadata", async (req, res) => {
     }
 
     // Get project info for each secret
-    const projectIds = [...new Set(secrets.map(s => s.project_id))];
+    const projectIds = [...new Set(secrets.map((s) => s.project_id))];
     const { data: projects, error: projectsError } = await supabase
       .from("projects")
       .select("id, name")
@@ -597,13 +680,13 @@ router.get("/metadata", async (req, res) => {
     // Map project names to secrets
     const projectMap = {};
     if (projects) {
-      projects.forEach(p => {
+      projects.forEach((p) => {
         projectMap[p.id] = p.name;
       });
     }
 
     // Get environment info for each secret
-    const envIds = [...new Set(secrets.map(s => s.environment_id))];
+    const envIds = [...new Set(secrets.map((s) => s.environment_id))];
     const { data: environments, error: envsError } = await supabase
       .from("environments")
       .select("id, name")
@@ -617,18 +700,18 @@ router.get("/metadata", async (req, res) => {
     // Map environment names to secrets
     const envMap = {};
     if (environments) {
-      environments.forEach(e => {
+      environments.forEach((e) => {
         envMap[e.id] = e.name;
       });
     }
 
     // Combine all data
-    const secretsWithDetails = secrets.map(secret => ({
+    const secretsWithDetails = secrets.map((secret) => ({
       id: secret.id,
       name: secret.name,
       type: secret.type,
       projectName: projectMap[secret.project_id] || "Unknown Project",
-      environmentName: envMap[secret.environment_id] || "Unknown Environment"
+      environmentName: envMap[secret.environment_id] || "Unknown Environment",
     }));
 
     res.json({ secrets: secretsWithDetails });
