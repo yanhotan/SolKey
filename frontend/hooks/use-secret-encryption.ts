@@ -140,14 +140,17 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
       }
       
       // Encrypt the secret value with the AES key
-      const encryptedData = await encryptWithKey(data.value, key);      // Now encrypt the AES key with the user's wallet public key
+      const encryptedData = await encryptWithKey(data.value, key);
+
+      // Now encrypt the AES key with the user's wallet public key
       // Pass the signature to use the same deterministic key that will be used for decryption
       const encryptedKeyData = encryptAesKeyForWallet(
         keyBytes,
         publicKey.toBase58(),
         seedSignature // Pass the signature to use the same key derivation as in decryption
       );
-        // Prepare data for API following schema.sql structure
+
+      // Prepare data for API following schema.sql structure
       const secretData = {
         // Secret data
         name: data.name,
@@ -158,25 +161,14 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
         environment_id: data.environmentId,
         
         // Secret key data
-        wallet_address: publicKey.toBase58(), // Keep as wallet_address as backend expects it with underscore
+        wallet_address: publicKey.toBase58(),
         encrypted_aes_key: encryptedKeyData.encryptedKey,
         nonce: encryptedKeyData.nonce,
         ephemeral_public_key: encryptedKeyData.ephemeralPublicKey
       };
-      
-      console.log("Sending secret data to backend:", {
-        name: secretData.name,
-        type: secretData.type,
-        project_id: secretData.project_id,
-        environment_id: secretData.environment_id,
-        has_encrypted_value: !!secretData.encrypted_value,
-        has_iv: !!secretData.iv,
-        wallet_address_length: secretData.wallet_address.length,
-        has_encryption_keys: !!secretData.encrypted_aes_key && !!secretData.nonce && !!secretData.ephemeral_public_key
-      });      // Send to backend for storage
+
+      // Send to backend for storage
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
-      console.log(`Sending POST request to ${apiUrl}/api/secrets`);
-      
       const response = await fetch(`${apiUrl}/api/secrets`, {
         method: 'POST',
         headers: {
@@ -185,22 +177,8 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
         body: JSON.stringify(secretData),
       });
 
-      console.log(`Received response with status: ${response.status}`);
-      
       if (!response.ok) {
-        // Try to extract the error details from the response
-        const errorText = await response.text();
-        let errorData;
-        
-        try {
-          errorData = JSON.parse(errorText);
-          console.error('Server error response:', errorData);
-        } catch (e) {
-          // If it's not JSON, use the raw text
-          console.error('Server error (raw):', errorText);
-          errorData = { error: errorText || 'Unknown error' };
-        }
-        
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         throw new Error(errorData.error || `Failed to create secret: ${response.status}`);
       }
 
@@ -251,7 +229,8 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
         console.error('❌ User rejected signature request:', signError);
         throw new Error('User declined to sign the authentication message');
       }
-        // Fetch encrypted data from backend with signature authentication
+      
+      // Fetch encrypted data from backend with signature authentication
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
       const response = await fetch(`${apiUrl}/api/secrets/${secretId}/decrypt`, {
         method: 'POST',
@@ -259,8 +238,8 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          walletAddress: publicKey.toBase58(), // Using camelCase as backend expects
-          signature: Buffer.from(signature).toString('base64') //Optional?
+          walletAddress: publicKey.toBase58(),
+          signature: Buffer.from(signature).toString('base64')
         }),
       });
 
@@ -287,7 +266,7 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
       return {
         encrypted: data.encrypted_value,
         iv: data.iv,
-        // authTag field is no longer used
+        // authTag field is no longer used in schema but kept in interface for compatibility
         authTag: ''
       };
     } catch (err) {
@@ -314,9 +293,9 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
     setIsLoading(true);
     setError(null);
 
-    try {      // Fetch secrets metadata for this wallet
+    try {
+      // Fetch secrets metadata for this wallet
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
-      // Make sure we use the correct parameter name as expected by the backend (walletAddress)
       const response = await fetch(`${apiUrl}/api/secrets/metadata?walletAddress=${publicKey.toBase58()}`, {
         method: 'GET',
         headers: {
@@ -483,4 +462,4 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
     isLoading,
     error
   };
-}
+} 

@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import {
   Dialog,
   DialogContent,
@@ -49,9 +50,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+
 } from "@/components/ui/alert-dialog";
 // No longer needed - using useWalletEncryption instead
 // import { useSecretEncryption } from "@/hooks/use-secret-encryption"
+
 
 interface Secret {
   name: string;
@@ -83,6 +86,7 @@ interface MockProjects {
 }
 
 export function ProjectDetail({ id }: { id: string }) {
+
   // Add event listener for the ADD SECRET button click from the SecretsTable
   useEffect(() => {
     const handleOpenAddSecretDialog = (event: CustomEvent) => {
@@ -156,6 +160,7 @@ export function ProjectDetail({ id }: { id: string }) {
       },
     },
   };
+
 
   const [searchQuery, setSearchQuery] = useState("");
   const [currentEnvironment, setCurrentEnvironment] = useState("");
@@ -732,7 +737,9 @@ export function ProjectDetail({ id }: { id: string }) {
       default:
         return "";
     }
+
   };
+
   if (!currentEnvironment) {
     return (
       <div className="p-8 text-center text-muted-foreground">
@@ -741,12 +748,14 @@ export function ProjectDetail({ id }: { id: string }) {
     );
   }
 
+
   // Show loading state if environment IDs are not loaded yet
   if (!environmentsLoaded) {
     console.log(
       "Environment IDs not loaded yet - waiting before allowing secret operations"
     );
   }
+
 
   return (
     <div className="space-y-6">
@@ -1103,6 +1112,7 @@ export function ProjectDetail({ id }: { id: string }) {
         ) : (
           <div className="mt-4">
             <h3 className="mb-4 font-medium">Project Secrets</h3>
+
             <div className="flex flex-wrap gap-3">
               <Button
                 variant="outline"

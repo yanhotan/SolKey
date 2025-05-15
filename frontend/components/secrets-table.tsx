@@ -20,6 +20,7 @@ import {
   Plus,
   Loader2,
 } from "lucide-react";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { useWalletEncryption } from "@/hooks/use-wallet-encryption";
@@ -406,6 +408,7 @@ export function SecretsTable({
 
   return (
     <div className="rounded-md border">
+
       <div className="p-2 bg-muted/40 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="capitalize bg-background">
@@ -425,6 +428,7 @@ export function SecretsTable({
           </Badge>
         )}
       </div>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -595,15 +599,18 @@ export function SecretsTable({
             <TableRow>
               <TableCell colSpan={5} className="h-24 text-center">
                 <div className="text-center">
+
                   <h3 className="text-lg font-medium">
                     No secrets found in {environment}
                   </h3>
+
                   <p className="text-sm text-muted-foreground">
                     {searchQuery
                       ? `No secrets matching "${searchQuery}"`
                       : "Get started by adding your first secret"}
                   </p>
                   {!searchQuery && (
+
                     <Button
                       className="mt-4"
                       onClick={() => {
@@ -614,6 +621,7 @@ export function SecretsTable({
                         );
                       }}
                     >
+
                       <Plus className="mr-2 h-4 w-4" />
                       Add Secret
                     </Button>
@@ -621,6 +629,7 @@ export function SecretsTable({
                   {error && (
                     <p className="mt-2 text-sm text-destructive">{error}</p>
                   )}
+
                 </div>
               </TableCell>
             </TableRow>
@@ -628,5 +637,6 @@ export function SecretsTable({
         </TableBody>
       </Table>
     </div>
+
   );
 }
