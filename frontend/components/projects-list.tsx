@@ -46,21 +46,40 @@ export function ProjectsList() {
   const [projects, setProjects] = useState<Projects[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Sample project data
-  useEffect(() => {
-    async function fetchProjects() {
-      try {
-        const res = await fetch("http://localhost:3002/api/projects");
-        const data = await res.json();
-        setProjects(Array.isArray(data) ? data : data.projects || []);
-      } catch (error) {
-        console.error("Failed to fetch projects:", error);
-        setProjects([]); // Set to empty array on error
-      }
+  // Function to fetch projects
+  const fetchProjects = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch("http://localhost:3002/api/projects");
+      const data = await res.json();
+      
+      // Transform the data to match the frontend structure
+      const transformedProjects = Array.isArray(data) ? data.map(project => ({
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        environments: project.environments || 0,
+        members: project.members || 0,
+        status: project.status || 'active',
+        updatedAt: new Date(project.updated_at || project.updatedAt).toLocaleDateString()
+      })) : [];
+      
+      setProjects(transformedProjects);
+    } catch (error) {
+      console.error("Failed to fetch projects:", error);
+      setProjects([]);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
+  // Fetch projects on mount and every 5 seconds
+  useEffect(() => {
     fetchProjects();
+    const interval = setInterval(fetchProjects, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Filter projects based on search query
