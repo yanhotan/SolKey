@@ -200,7 +200,51 @@ export function SecretsTable({
           }
         }
       }
-        // Decrypt the secret using the wallet encryption
+        
+      // Verify that the secret has the required encrypted data
+      if (!secret.value || !secret.iv) {
+        console.error('Secret is missing encrypted data:', {
+          id: secret.id,
+          name: secret.name,
+          hasValue: !!secret.value,
+          valueLength: secret.value?.length || 0,
+          hasIv: !!secret.iv,
+          ivLength: secret.iv?.length || 0
+        });
+        
+        // If data is missing, try to fetch the full secret details
+        try {
+          console.log(`Secret ${secret.id} is missing encrypted data, attempting to fetch the full secret`);
+          
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+          const response = await fetch(`${apiUrl}/api/secrets/${secret.id}?walletAddress=${publicKey.toBase58()}`);
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch secret: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          
+          if (data && data.encrypted_value && data.iv) {
+            // Update the secret with the fetched data
+            console.log(`Retrieved full secret data for ${secret.id}:`, {
+              encryptedValueLength: data.encrypted_value.length,
+              ivLength: data.iv.length
+            });
+            
+            // Update the secret in our local state
+            secret.value = data.encrypted_value;
+            secret.iv = data.iv;
+          } else {
+            throw new Error('Retrieved secret data is incomplete');
+          }
+        } catch (fetchError) {
+          console.error('Failed to fetch full secret data:', fetchError);
+          throw new Error('Could not retrieve encrypted secret data');
+        }
+      }
+      
+      // Decrypt the secret using the wallet encryption
       console.log(`Decrypting secret ${secret.id} (${secret.name})`);
       try {
         // Log the data we're working with to help debug issues
@@ -316,7 +360,9 @@ export function SecretsTable({
               <TableRow key={secret.id}>
                 <TableCell className="font-medium">{secret.name}</TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-2">                    <div className="font-mono text-sm">                      <span className={
+                  <div className="flex items-center gap-2">                    
+                    <div className="font-mono text-sm">                      
+                      <span className={
                         secret.type === "number" ? "text-green-600 dark:text-green-400" :
                         secret.type === "boolean" ? "text-amber-600 dark:text-amber-400" :
                         secret.type === "json" ? "text-purple-600 dark:text-purple-400" :
@@ -325,7 +371,7 @@ export function SecretsTable({
                       }>
                         {visibleSecrets[secret.id] ? 
                           (secret.decryptedValue || "Decryption failed") : 
-                          (secret.value || "[encrypted]")
+                          "[encrypted]"
                         }
                       </span>
                     </div>
