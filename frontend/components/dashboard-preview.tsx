@@ -251,7 +251,7 @@ export function DashboardPreview() {
                     {visibleSecrets[secret.id] ? (
                       secret.value
                     ) : (
-                      <span className="text-muted-foreground">••••••••••••••••••••••••••</span>
+                      <span className="text-muted-foreground">•••••••••••••••</span>
                     )}
                   </div>
                   <div

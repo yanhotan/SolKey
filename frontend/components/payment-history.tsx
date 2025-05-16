@@ -42,7 +42,7 @@ export function PaymentHistory() {
       usdcAmount: "20 USDC",
       usdEquivalent: "~$20.00",
       status: "paid",
-      method: "Solana",
+      method: "USDC",
       currency: "USDC",
       plan: "Pro",
       txHash: "3MqL8...jF17",
@@ -145,6 +145,7 @@ export function PaymentHistory() {
                 ) : (
                   payment.method
                 )}
+                
               </div>
               <div className="col-span-2 flex items-center gap-2">
                 {payment.txHash ? (
