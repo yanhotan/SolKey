@@ -109,7 +109,7 @@ export function BillingPlans() {
             15% Discount with SOL
           </Badge>
           <p className="text-sm">
-            Pay with SOL on Solana Devnet for faster transactions and a 15%
+            Pay with SOL on Solana Chain for faster transactions and a 15%
             discount. Connect your Solana wallet to get started.
           </p>
         </div>

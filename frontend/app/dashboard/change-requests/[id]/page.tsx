@@ -3,7 +3,7 @@ import { ChangeRequestDetail } from "@/components/change-requests-details"
 import { ChangeRequestHeader } from "@/components/change-requests-details-header"
 
 export const metadata: Metadata = {
-  title: "Change Request Details - SolSecrets",
+  title: "Change Request Details - SolSecure",
   description: "Review and approve changes to your secrets",
 }
 

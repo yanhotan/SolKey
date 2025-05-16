@@ -275,7 +275,7 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
         throw new Error('Invalid or missing encrypted data from server');
       }
       
-      console.log('🔒 Received encrypted data:', {
+      console.log('Received encrypted data:', {
         encryptedValueLength: data.encrypted_value.length,
         ivLength: data.iv.length,
         hasEncryptionKeys: !!data.encrypted_aes_key && !!data.nonce && !!data.ephemeral_public_key
@@ -376,7 +376,7 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
         throw new Error('Missing encryption key data - cannot decrypt');
       }
       
-      console.log('🔑 Preparing to decrypt with wallet', {
+      console.log(' Preparing to decrypt with wallet', {
         encryptedAesKeyLength: secretInfo.encrypted_aes_key.length,
         nonceLength: secretInfo.nonce.length,
         ephemeralPubKeyLength: secretInfo.ephemeral_public_key.length
@@ -399,7 +399,7 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
       }
       
       // Use the signature to decrypt the AES key
-      console.log('🔓 Decrypting AES key with signature-derived key');
+      console.log(' Decrypting AES key with signature-derived key');
       
       let aesKeyBytes: Uint8Array;
       try {
@@ -441,7 +441,7 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
       }
       
       // Decrypt the data
-      console.log('🔓 Decrypting secret data with AES key');
+      console.log(' Decrypting secret data with AES key');
       const decryptedValue = await decryptWithKey({
         encrypted: secretInfo.encrypted_value,
         iv: secretInfo.iv,

@@ -3,7 +3,7 @@ import { ProjectsList } from "@/components/projects-list"
 import { ProjectsHeader } from "@/components/projects-header"
 
 export const metadata: Metadata = {
-  title: "Projects - SolSecrets",
+  title: "Projects - SolSecure",
   description: "Manage your projects and their environment variables",
 }
 

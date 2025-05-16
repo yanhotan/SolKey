@@ -22,6 +22,7 @@ import { useWallet } from "@solana/wallet-adapter-react"
 import { Badge } from "@/components/ui/badge"
 import { shortenAddress } from "@/lib/utils"
 import { HTMLAttributes } from "react"
+import Image from "next/image"
 
 interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
   variant?: "default" | "secondary" | "destructive" | "outline"
@@ -54,8 +55,16 @@ export function DashboardHeader() {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
       <Link href="/dashboard" className="flex items-center gap-2">
-        <div className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-500 to-blue-500"></div>
-        <span className="font-bold">SolSecure</span>
+        <div className="h-6 w-6">
+          <Image 
+            src="/images/SolSecure_logo.png" 
+            alt="SolSecure Logo" 
+            width={24} 
+            height={24} 
+            className="h-6 w-6"
+          />
+        </div>
+        <span className="font-bold bg-clip-text text-transparent bg-solana-gradient animate-gradient-shift bg-[size:200%_auto]">SolSecure</span>
       </Link>
       <div className="relative w-full max-w-md">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

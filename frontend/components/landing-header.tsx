@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
 import { useState } from "react"
@@ -16,15 +17,22 @@ export function LandingHeader() {
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2">
             <motion.div
-              className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
               initial={{ rotate: -10 }}
               animate={{ rotate: 0 }}
               transition={{ type: "spring", stiffness: 200 }}
-            />
+            >
+              <Image 
+                src="/images/SolSecure_logo.png" 
+                alt="SolSecure Logo" 
+                width={32} 
+                height={32} 
+                className="h-8 w-8"
+              />
+            </motion.div>
             <motion.span
-              className="text-xl font-bold"
+              className="text-xl font-bold bg-clip-text text-transparent bg-solana-gradient animate-gradient-shift bg-[size:200%_auto]"
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}

@@ -68,7 +68,7 @@ export function base64ToUint8Array(base64: string): Uint8Array {
   const cleanBase64 = base64.replace(/\s/g, '');
   
   // Log the input
-  console.log('🔍 Base64 decoding input:', {
+  console.log(' Base64 decoding input:', {
     originalLength: base64.length,
     cleanedLength: cleanBase64.length,
     hasValidBase64Chars: /^[A-Za-z0-9+/]*={0,2}$/.test(cleanBase64),
@@ -119,7 +119,7 @@ export function base64ToUint8Array(base64: string): Uint8Array {
     try {
       // Test with a valid subset of the string
       const testSegment = paddedBase64.substring(0, 4); // Just first valid quartet
-      console.log('🔍 Testing with valid base64 segment:', {
+      console.log(' Testing with valid base64 segment:', {
         segment: testSegment,
         decodedLength: atob(testSegment).length
       });
@@ -268,7 +268,7 @@ export async function encryptData(
     const dataBytes = new TextEncoder().encode(data);
     
     // Show detailed info about the key
-    console.log('🔑 Encryption key details:', {
+    console.log('Encryption key details:', {
       type: key.type,
       algorithm: key.algorithm.name,
       extractable: key.extractable,
@@ -276,7 +276,7 @@ export async function encryptData(
     });
     
     // Log detailed input parameters
-    console.log('🔐 Encryption inputs:', {
+    console.log('Encryption inputs:', {
       plaintextByteLength: dataBytes.length,
       ivByteLength: iv.length,
       ivHex: uint8ArrayToHex(iv),
@@ -315,7 +315,7 @@ export async function encryptData(
     // Verify encrypted data has correct size (plaintext + 16 bytes auth tag)
     const expectedCipherLength = dataBytes.length + 16; // plaintext + auth tag
     
-    console.log('📊 Encryption detailed result:', {
+    console.log(' Encryption detailed result:', {
       encryptedTotalBytes: encrypted.length,
       ciphertextBytes: ciphertextOnly.length,
       authTagBytes: tagBytes.length,
@@ -373,7 +373,7 @@ export async function decryptData(
     }
     
     // Print more details about the key
-    console.log('🔑 Key details:', {
+    console.log('Key details:', {
       type: key.type,
       algorithm: key.algorithm.name,
       extractable: key.extractable,
@@ -383,7 +383,7 @@ export async function decryptData(
     // Convert hex IV to bytes
     const ivBytes = hexToUint8Array(encryptedData.iv);
     if (ivBytes.length !== 12) {
-      console.warn(`⚠️ IV length is ${ivBytes.length} bytes, expected 12 bytes`);
+      console.warn(`IV length is ${ivBytes.length} bytes, expected 12 bytes`);
     }
     
     // Log first few bytes of IV in hex for debugging
@@ -412,7 +412,7 @@ export async function decryptData(
     // Check if base64 is properly padded
     const isPaddingCorrect = encryptedData.encrypted.length % 4 === 0;
     
-    console.log('🔍 Detailed decryption inputs:', {
+    console.log(' Detailed decryption inputs:', {
       ivLength: ivBytes.length,
       ivHex: encryptedData.iv.substring(0, 16) + '...',
       ivBytesActual: ivBytesHex,
@@ -448,7 +448,7 @@ export async function decryptData(
     
     // Compare lengths before and after padding
     if (paddingAdded) {
-      console.log('📊 Re-decoded bytes after padding:', {
+      console.log('Re-decoded bytes after padding:', {
         originalLength: encryptedBytes.length,
         afterPaddingLength: finalEncryptedBytes.length,
         difference: finalEncryptedBytes.length - encryptedBytes.length
@@ -462,7 +462,7 @@ export async function decryptData(
       .map(b => b.toString(16).padStart(2, '0'))
       .join(' ');
     
-    console.log('🔒 Auth tag check:', {
+    console.log('Auth tag check:', {
       hasProperLength,
       encryptedTotalLength: finalEncryptedBytes.length,
       expectedAuthTagLength: 16,
@@ -510,7 +510,7 @@ export async function decryptData(
       
       // Try again with a different approach - separate auth tag
       if (finalEncryptedBytes.length >= 32) {
-        console.log('🔄 Trying alternative decryption approach - separate ciphertext and auth tag');
+        console.log('Trying alternative decryption approach - separate ciphertext and auth tag');
         
         try {
           // Extract ciphertext and auth tag separately
@@ -518,7 +518,7 @@ export async function decryptData(
           const ciphertext = finalEncryptedBytes.slice(0, ciphertextLength);
           const authTag = finalEncryptedBytes.slice(ciphertextLength);
           
-          console.log('🔍 Split approach details:', {
+          console.log('Split approach details:', {
             originalLength: finalEncryptedBytes.length,
             ciphertextLength,
             authTagLength: authTag.length,

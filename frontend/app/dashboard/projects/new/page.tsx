@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { NewProjectForm } from "@/components/new-project-form"
 
 export const metadata: Metadata = {
-  title: "Create New Project - SolSecrets",
+  title: "Create New Project - SolSecure",
   description: "Create a new project to manage your secrets",
 }
 

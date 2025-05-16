@@ -12,7 +12,7 @@ import { EncryptionTest } from "@/components/encryption-test";
 
 export default function DashboardPage() {
   const metadata: Metadata = {
-    title: "Dashboard - SolSecrets",
+    title: "Dashboard - SolSecure",
     description: "Manage your secrets and environment variables",
   };
 

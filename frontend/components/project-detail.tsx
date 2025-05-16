@@ -456,8 +456,8 @@ export function ProjectDetail({ id }: { id: string }) {
 
       // Encrypt the secret data using wallet encryption - same as in encryption-test.tsx
       const encryptedData = await encryptData(secretValue);
-      console.log("🔒 ENCRYPTION PROCESS COMPLETE --------------------------");
-      console.log("📦 Encrypted data to send:", {
+      console.log("ENCRYPTION PROCESS COMPLETE --------------------------");
+      console.log(" Encrypted data to send:", {
         encrypted_length: encryptedData.encrypted.length,
         iv_length: encryptedData.iv.length,
         encrypted_sample: encryptedData.encrypted.substring(0, 20) + "...",
@@ -550,7 +550,7 @@ export function ProjectDetail({ id }: { id: string }) {
       // Send to backend for storage
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
 
-      console.log("📤 Sending to API:", {
+      console.log(" Sending to API:", {
         url: `${apiUrl}/api/secrets`,
         method: "POST",
         dataKeys: Object.keys(secretData),

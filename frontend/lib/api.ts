@@ -351,7 +351,7 @@ export async function decryptSecret(
   authTag: string
 ): Promise<string> {
   try {
-    console.log("🔑 Starting decryption with detailed debugging...");
+    console.log(" Starting decryption with detailed debugging...");
     
     // Check for encryption key in localStorage
     const encryptionKey = localStorage.getItem('solkey:encryption-key');
@@ -361,7 +361,7 @@ export async function decryptSecret(
     
     // Get the encryption key bytes from localStorage (base64 encoded)
     const keyBytes = base64ToUint8Array(encryptionKey);
-    console.log("🔐 Encryption key details:", {
+    console.log(" Encryption key details:", {
       keyLength: keyBytes.length,
       expectedLength: 32,
       keyFirstBytes: Array.from(keyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
@@ -382,7 +382,7 @@ export async function decryptSecret(
     
     // Convert the IV from hex to bytes
     const ivBytes = hexToUint8Array(iv);
-    console.log("🔍 IV details:", {
+    console.log(" IV details:", {
       decodedByteLength: ivBytes.length,
       expectedLength: 12,  // AES-GCM standard is 12 bytes
       firstBytes: Array.from(ivBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(''),
@@ -393,14 +393,14 @@ export async function decryptSecret(
     // So we just need to decode the base64 string directly
     const encryptedBytes = base64ToUint8Array(encryptedValue);
     
-    console.log("📦 Data prepared for decryption:", {
+    console.log("Data prepared for decryption:", {
       encryptedBytesLength: encryptedBytes.length,
       ivBytesLength: ivBytes.length
     });
     
     // Additional diagnostic info for AES-GCM structure
     if (encryptedBytes.length > 16) {
-      console.log("🔍 AES-GCM structure diagnostic:", {
+      console.log(" AES-GCM structure diagnostic:", {
         totalLength: encryptedBytes.length,
         expectedCiphertextLength: encryptedBytes.length - 16, // Assuming 16-byte auth tag
         expectedAuthTagLength: 16,
@@ -413,7 +413,7 @@ export async function decryptSecret(
         const authTagBytes = hexToUint8Array(authTag);
         const expectedTag = Array.from(authTagBytes).map(b => b.toString(16).padStart(2, '0')).join('');
         const actualTag = Array.from(encryptedBytes.slice(-16)).map(b => b.toString(16).padStart(2, '0')).join('');
-        console.log("🔍 Auth tag comparison:", {
+        console.log(" Auth tag comparison:", {
           providedTagLength: authTagBytes.length,
           providedTagHex: expectedTag,
           extractedTagHex: actualTag,
@@ -424,7 +424,7 @@ export async function decryptSecret(
     
     // Attempt decryption
     try {
-      console.log("🔓 Decryption attempt #1: Using direct encrypted data with WebCrypto");
+      console.log(" Decryption attempt #1: Using direct encrypted data with WebCrypto");
       
       const decryptedBuffer = await crypto.subtle.decrypt(
         {
@@ -443,7 +443,7 @@ export async function decryptSecret(
       console.error("❌ Primary decryption failed:", primaryError);
       
       // Try fallback approach: separate ciphertext and auth tag
-      console.log("🔍 Attempting fallback decryption approach #1: Separating ciphertext and auth tag");
+      console.log(" Attempting fallback decryption approach #1: Separating ciphertext and auth tag");
       try {
         // The auth tag is the last 16 bytes of the encrypted data
         const tagLength = 16; // GCM auth tag is always 16 bytes
@@ -453,7 +453,7 @@ export async function decryptSecret(
         const ciphertext = encryptedBytes.slice(0, ciphertextLength);
         const extractedTag = encryptedBytes.slice(ciphertextLength);
         
-        console.log("🔍 Split data details:", {
+        console.log(" Split data details:", {
           ciphertextLength: ciphertext.length,
           extractedTagLength: extractedTag.length,
           extractedTagFirstBytes: Array.from(extractedTag.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(''),
@@ -483,11 +483,11 @@ export async function decryptSecret(
         
         // Try fallback approach 2: Using explicit auth tag from params
         if (authTag && authTag.length > 0) {
-          console.log("🔍 Attempting fallback decryption approach #2: Using provided auth tag");
+          console.log(" Attempting fallback decryption approach #2: Using provided auth tag");
           try {
             // Convert auth tag from hex to bytes
             const authTagBytes = hexToUint8Array(authTag);
-            console.log("🔐 Auth tag details:", {
+            console.log(" Auth tag details:", {
               decodedByteLength: authTagBytes.length,
               expectedLength: 16, // GCM auth tag is always 16 bytes
               firstBytes: Array.from(authTagBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('')
@@ -655,7 +655,7 @@ function base64ToUint8Array(base64: string): Uint8Array {
     
     // Try an alternative approach if the first one fails
     try {
-      console.log("🔍 Attempting alternative base64 conversion method...");
+      console.log(" Attempting alternative base64 conversion method...");
       
       // Remove any non-base64 characters and try again
       const strictBase64 = cleanBase64.replace(/[^A-Za-z0-9+/=]/g, '');

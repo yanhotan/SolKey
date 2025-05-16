@@ -105,7 +105,7 @@ export function LandingFooter() {
         </div>
         <div className="mt-12 border-t pt-8 text-center">
           <p className="text-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} SolSecrets. All rights reserved.
+            &copy; {new Date().getFullYear()} SolSecure. All rights reserved.
           </p>
         </div>
       </div>

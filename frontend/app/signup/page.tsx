@@ -3,8 +3,8 @@ import Link from "next/link"
 import { SignupForm } from "@/components/signup-form"
 
 export const metadata: Metadata = {
-  title: "Sign Up - SolSecrets",
-  description: "Create a new SolSecrets account",
+  title: "Sign Up - SolSecure",
+  description: "Create a new SolSecure account",
 }
 
 export default function SignupPage() {

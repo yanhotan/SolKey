@@ -141,7 +141,7 @@ export function useWalletEncryption() {
             key = await importKeyFromBase64(storedData.encryptionKey);
             
             // Log details about the key we're using
-            console.log('🔑 Using stored encryption key');
+            console.log(' Using stored encryption key');
             
             setEncryptionKey(key);
           } catch (keyError) {
@@ -192,7 +192,7 @@ export function useWalletEncryption() {
     }
 
     // Log the encrypted data we're trying to decrypt
-    console.log('🔍 Attempting to decrypt data:', {
+    console.log(' Attempting to decrypt data:', {
       hasEncrypted: !!encryptedData.encrypted,
       encryptedLength: encryptedData.encrypted?.length || 0,
       hasIv: !!encryptedData.iv,

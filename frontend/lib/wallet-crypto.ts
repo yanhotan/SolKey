@@ -18,11 +18,7 @@ import { uint8ArrayToBase64, base64ToUint8Array } from './crypto';
  */
 export function convertPublicKeyToX25519(publicKeyBytes: Uint8Array): Uint8Array {
   try {
-    console.log("🔑 Converting Ed25519 public key to X25519...");
-    console.log("Input public key:", {
-      length: publicKeyBytes.length,
-      hex: Array.from(publicKeyBytes).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16) + '...',
-    });
+    console.log("Converting Ed25519 public key to X25519");
     
     // First ensure we have exactly 32 bytes
     if (publicKeyBytes.length !== 32) {
@@ -38,14 +34,11 @@ export function convertPublicKeyToX25519(publicKeyBytes: Uint8Array): Uint8Array
     // Try our internal implementation first
     const converted = ed2curve.convertPublicKey(publicKeyBytes);
     if (converted) {
-      console.log("✅ Converted using internal ed2curve implementation:", {
-        length: converted.length,
-        hex: Array.from(converted).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16) + '...',
-      });
+      console.log("Converted successfully using internal ed2curve implementation");
       return converted;
     }
     
-    console.warn("⚠️ Internal conversion failed, trying alternative approaches...");
+    console.warn("Internal conversion failed, trying alternative approaches...");
     
     // Approach 1: Try fromSecretKey
     let x25519PublicKey: Uint8Array;
@@ -53,12 +46,7 @@ export function convertPublicKeyToX25519(publicKeyBytes: Uint8Array): Uint8Array
     try {
       // Use the public key bytes directly with tweetnacl's box keypair
       const keypair1 = nacl.box.keyPair.fromSecretKey(publicKeyBytes);
-      
-      console.log("Approach 1 (fromSecretKey) result:", {
-        publicKeyLength: keypair1.publicKey.length,
-        publicKeyHex: Array.from(keypair1.publicKey).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16) + '...',
-      });
-      
+      console.log("Approach 1 (fromSecretKey) successful");
       x25519PublicKey = keypair1.publicKey;
     } catch (error) {
       console.error("Approach 1 failed:", error);
@@ -74,17 +62,12 @@ export function convertPublicKeyToX25519(publicKeyBytes: Uint8Array): Uint8Array
         
         // Use the hash as seed for a new keypair
         const keypair2 = nacl.box.keyPair.fromSecretKey(hashBuffer);
-        
-        console.log("Approach 2 (hash-based) result:", {
-          publicKeyLength: keypair2.publicKey.length,
-          publicKeyHex: Array.from(keypair2.publicKey).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16) + '...',
-        });
-        
+        console.log("Approach 2 (hash-based) successful");
         x25519PublicKey = keypair2.publicKey;
       } catch (hashError) {
         console.error("Approach 2 failed:", hashError);
         
-        // Approach 3: Last resort, try basic key clamping like in our ed2curve implementation
+        // Approach 3: Last resort, try basic key clamping
         try {
           console.log("Trying direct key clamping as last resort");
           const clampedKey = new Uint8Array(32);
@@ -102,18 +85,14 @@ export function convertPublicKeyToX25519(publicKeyBytes: Uint8Array): Uint8Array
           console.error("All conversion approaches failed:", clampError);
           
           // Absolute last resort, generate a completely new keypair
-          console.warn("⚠️ Using fallback random keypair - THIS WILL NOT WORK FOR DECRYPTION!");
+          console.warn("Using fallback random keypair - THIS WILL NOT WORK FOR DECRYPTION!");
           const fallbackKeypair = nacl.box.keyPair();
           x25519PublicKey = fallbackKeypair.publicKey;
         }
       }
     }
     
-    console.log("Final converted X25519 public key:", {
-      length: x25519PublicKey.length,
-      hex: Array.from(x25519PublicKey).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16) + '...',
-    });
-    
+    console.log("Key conversion completed");
     return x25519PublicKey;
   } catch (error) {
     console.error("Error converting public key to X25519:", error);
@@ -127,24 +106,17 @@ export function convertPublicKeyToX25519(publicKeyBytes: Uint8Array): Uint8Array
  */
 export function createDeterministicKeypairFromSignature(signature: Uint8Array): nacl.BoxKeyPair {
   try {
-    console.log("🔑 Creating deterministic keypair from signature...");
-    console.log("Input signature:", {
-      length: signature.length,
-      firstBytesHex: Array.from(signature.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-    });
+    console.log("Creating deterministic keypair from signature");
     
     // Ensure we have enough bytes for a key
     if (signature.length < 32) {
-      console.error("❌ Signature too short for key derivation:", signature.length);
+      console.error("Signature too short for key derivation:", signature.length);
       throw new Error("Signature too short for key derivation");
     }
     
     // Approach 1: Use first 32 bytes of signature directly as seed
     const seed = signature.slice(0, 32);
-    console.log("Seed extracted from signature:", {
-      length: seed.length,
-      seedHex: Array.from(seed).map(b => b.toString(16).padStart(2, '0')).join(''),
-    });
+    console.log("Extracted seed from signature");
     
     // Try multiple approaches for consistency with the public key conversion
     let keypair: nacl.BoxKeyPair;
@@ -152,14 +124,9 @@ export function createDeterministicKeypairFromSignature(signature: Uint8Array): 
     try {
       // Approach 1: Direct use of seed
       keypair = nacl.box.keyPair.fromSecretKey(seed);
-      
-      console.log("Approach 1 (direct seed) keypair:", {
-        publicKeyLength: keypair.publicKey.length,
-        publicKeyHex: Array.from(keypair.publicKey).map(b => b.toString(16).padStart(2, '0')).join(''),
-        secretKeyLength: keypair.secretKey.length,
-      });
+      console.log("Created keypair using direct seed method");
     } catch (error) {
-      console.error("Approach 1 failed:", error);
+      console.error("Direct seed approach failed:", error);
       
       // Approach 2: Hash the seed for additional security
       try {
@@ -170,27 +137,17 @@ export function createDeterministicKeypairFromSignature(signature: Uint8Array): 
         }
         
         keypair = nacl.box.keyPair.fromSecretKey(hashedSeed);
-        
-        console.log("Approach 2 (hashed seed) keypair:", {
-          publicKeyLength: keypair.publicKey.length,
-          publicKeyHex: Array.from(keypair.publicKey).map(b => b.toString(16).padStart(2, '0')).join(''),
-          secretKeyLength: keypair.secretKey.length,
-        });
+        console.log("Created keypair using hashed seed method");
       } catch (hashError) {
-        console.error("Approach 2 failed:", hashError);
+        console.error("Hashed seed approach failed:", hashError);
         
         // Fallback to a completely new keypair as last resort
-        console.warn("⚠️ Using fallback random keypair - THIS WILL NOT WORK FOR DECRYPTION!");
+        console.warn("Using fallback random keypair - THIS WILL NOT WORK FOR DECRYPTION!");
         keypair = nacl.box.keyPair();
       }
     }
     
-    // Log the final keypair we're using
-    console.log("Final deterministic keypair:", {
-      publicKeyHex: Array.from(keypair.publicKey).map(b => b.toString(16).padStart(2, '0')).join(''),
-      secretKeyStartHex: Array.from(keypair.secretKey.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-    });
-    
+    console.log("Deterministic keypair created successfully");
     return keypair;
   } catch (error) {
     console.error("Error creating deterministic keypair:", error);
@@ -205,7 +162,7 @@ export function createDeterministicKeypairFromSignature(signature: Uint8Array): 
  */
 export function convertPrivateKeyToX25519(privateKeyBytes: Uint8Array): Uint8Array {
   try {
-    console.log("Converting Ed25519 private key to X25519...");
+    console.log("Converting Ed25519 private key to X25519");
     console.log("Input private key length:", privateKeyBytes.length);
     
     // Ensure we have exactly 32 bytes
@@ -220,7 +177,6 @@ export function convertPrivateKeyToX25519(privateKeyBytes: Uint8Array): Uint8Arr
     }
     
     // Try to use tweetnacl-util-js if available (which has the proper conversion)
-    // This is a more accurate implementation of the ed2curve conversion used on the backend
     try {
       // Attempt conversion using external libraries if they exist
       if (typeof (window as any).ed2curve !== 'undefined' && 
@@ -245,8 +201,7 @@ export function convertPrivateKeyToX25519(privateKeyBytes: Uint8Array): Uint8Arr
     }
     
     // Last resort fallback - use the key directly
-    // This is not technically correct but might work in some implementations
-    console.warn("⚠️ Using private key directly without proper conversion - this may not work correctly");
+    console.warn("Using private key directly without proper conversion - this may not work correctly");
     return privateKeyBytes;
   } catch (error) {
     console.error("Error converting private key to X25519:", error);
@@ -277,10 +232,9 @@ export function encryptAesKeyForWallet(
   ephemeralPublicKey: string; // base64
 } {
   try {
-    console.log("🔒 ENCRYPTION PROCESS START ------------------------------");
-    console.log("Target wallet address:", targetWalletPublicKeyBase58);
+    console.log("Starting encryption process");
+    console.log("Target wallet address:", targetWalletPublicKeyBase58.substring(0, 4) + "..." + targetWalletPublicKeyBase58.substring(targetWalletPublicKeyBase58.length - 4));
     console.log("AES key bytes length:", aesKeyBytes.length);
-    console.log("AES key bytes (hex):", Array.from(aesKeyBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...');
     console.log("Using signature for key derivation:", !!signatureBytes);
     
     // Check if we should use debug mode
@@ -302,14 +256,9 @@ export function encryptAesKeyForWallet(
       nonce = nacl.randomBytes(24);
     }
     
-    console.log("Nonce:", {
-      length: nonce.length,
-      hex: Array.from(nonce).map(b => b.toString(16).padStart(2, '0')).join(''),
-    });
+    console.log("Generated nonce of length:", nonce.length);
 
     // Step 1: Determine which encryption approach to use
-    // If we have a signature, create a deterministic keypair from it (same as decryption will do)
-    // Otherwise, use the X25519 conversion approach (which won't work with decryption without the private key)
     let targetEncryptionKey: Uint8Array;
     let methodUsed: string;
     
@@ -321,20 +270,14 @@ export function encryptAesKeyForWallet(
       targetEncryptionKey = deterministicKeypair.publicKey;
       methodUsed = "signature-derived";
       
-      console.log("Using signature-derived public key for encryption:", {
-        length: targetEncryptionKey.length,
-        hex: Array.from(targetEncryptionKey.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-      });
+      console.log("Using signature-derived public key for encryption");
     } else {
       // Convert Ed25519 public key to X25519 (old approach)
       // Attempt to decode the wallet address
       let targetWalletBytes: Uint8Array;
       try {
         targetWalletBytes = bs58.decode(targetWalletPublicKeyBase58);
-        console.log("Decoded wallet address:", {
-          length: targetWalletBytes.length,
-          hex: Array.from(targetWalletBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-        });
+        console.log("Decoded wallet address successfully");
       } catch (err) {
         console.error("Failed to decode wallet address:", err);
         throw new Error("Invalid wallet address format");
@@ -344,20 +287,12 @@ export function encryptAesKeyForWallet(
       targetEncryptionKey = convertPublicKeyToX25519(targetWalletBytes);
       methodUsed = "ed25519-converted";
       
-      console.log("Using converted X25519 public key for encryption:", {
-        length: targetEncryptionKey.length,
-        hex: Array.from(targetEncryptionKey.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-      });
+      console.log("Using converted X25519 public key for encryption");
     }
 
     // Create a fresh ephemeral keypair for this encryption
     const ephemeralKeypair = generateEphemeralKeypair();
-    console.log("Generated ephemeral keypair:", {
-      publicKeyLength: ephemeralKeypair.publicKey.length,
-      secretKeyLength: ephemeralKeypair.secretKey.length,
-      publicKeyHex: Array.from(ephemeralKeypair.publicKey.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-      secretKeyStartHex: Array.from(ephemeralKeypair.secretKey.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-    });
+    console.log("Generated ephemeral keypair");
 
     // Encrypt AES key with target public key and ephemeral private key
     const encryptedKeyBytes = nacl.box(
@@ -368,15 +303,11 @@ export function encryptAesKeyForWallet(
     );
     
     if (!encryptedKeyBytes) {
-      console.error("❌ nacl.box returned null - encryption failed");
+      console.error("Encryption failed - nacl.box returned null");
       throw new Error("Encryption operation failed");
     }
     
-    console.log("Encrypted AES key:", {
-      length: encryptedKeyBytes.length,
-      hex: Array.from(encryptedKeyBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-      methodUsed
-    });
+    console.log("Successfully encrypted AES key using method:", methodUsed);
 
     // Convert to base64 for storage
     const result = {
@@ -385,16 +316,11 @@ export function encryptAesKeyForWallet(
       ephemeralPublicKey: uint8ArrayToBase64(ephemeralKeypair.publicKey)
     };
     
-    console.log("Final encryption result (base64):", {
+    console.log("Encryption complete with result lengths:", {
       encryptedKeyLength: result.encryptedKey.length,
-      encryptedKeyStart: result.encryptedKey.substring(0, 20) + '...',
       nonceLength: result.nonce.length,
-      nonceStart: result.nonce.substring(0, 20) + '...',
       ephemeralPublicKeyLength: result.ephemeralPublicKey.length,
-      ephemeralPublicKeyStart: result.ephemeralPublicKey.substring(0, 20) + '...',
     });
-    
-    console.log("🔒 ENCRYPTION PROCESS COMPLETE --------------------------");
     
     return result;
   } catch (error) {
@@ -414,44 +340,33 @@ export function decryptAesKeyWithSignature(
   signature: Uint8Array
 ): Uint8Array {
   try {
-    console.log("🔓 SIGNATURE DECRYPTION START ------------------------------");
+    console.log("Starting signature-based decryption process");
     console.log("Signature length:", signature.length);
-    console.log("Signature (hex):", Array.from(signature.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...');
     
     // Convert base64 strings to Uint8Array
-    console.log("Encrypted inputs (base64):", {
+    console.log("Processing encrypted inputs with lengths:", {
       encryptedKeyLength: encryptedKeyBase64.length,
-      encryptedKeyStart: encryptedKeyBase64.substring(0, 20) + '...',
       nonceLength: nonceBase64.length,
-      nonceStart: nonceBase64.substring(0, 20) + '...',
-      ephemeralPublicKeyLength: ephemeralPublicKeyBase64.length,
-      ephemeralPublicKeyStart: ephemeralPublicKeyBase64.substring(0, 20) + '...',
+      ephemeralPublicKeyLength: ephemeralPublicKeyBase64.length
     });
     
     const encryptedKeyBytes = base64ToUint8Array(encryptedKeyBase64);
     const nonceBytes = base64ToUint8Array(nonceBase64);
     const ephemeralPublicKeyBytes = base64ToUint8Array(ephemeralPublicKeyBase64);
     
-    console.log("Decoded binary data:", {
+    console.log("Decoded binary data lengths:", {
       encryptedKeyLength: encryptedKeyBytes.length,
-      encryptedKeyHex: Array.from(encryptedKeyBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
       nonceLength: nonceBytes.length,
-      nonceHex: Array.from(nonceBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-      ephemeralPublicKeyLength: ephemeralPublicKeyBytes.length,
-      ephemeralPublicKeyHex: Array.from(ephemeralPublicKeyBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
+      ephemeralPublicKeyLength: ephemeralPublicKeyBytes.length
     });
     
-    // The most important step: create the same deterministic keypair from the signature
-    // that was used (or would be used) during encryption
+    // Create the same deterministic keypair from the signature
+    // that was used during encryption
     const deterministicKeypair = createDeterministicKeypairFromSignature(signature);
-    
-    console.log("Deterministic keypair from signature:", {
-      publicKeyHex: Array.from(deterministicKeypair.publicKey.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-      secretKeyHex: Array.from(deterministicKeypair.secretKey.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-    });
+    console.log("Created deterministic keypair from signature");
 
     // Decrypt using the deterministic keypair's secret key
-    console.log("Attempting decryption with deterministic private key...");
+    console.log("Attempting decryption with deterministic private key");
     const decryptedKeyBytes = nacl.box.open(
       encryptedKeyBytes,
       nonceBytes,
@@ -460,14 +375,14 @@ export function decryptAesKeyWithSignature(
     );
 
     if (!decryptedKeyBytes) {
-      console.error("❌ Decryption failed - this could mean the encryption was done with a different key");
-      console.log("Trying legacy X25519 conversion approach as fallback...");
+      console.error("Decryption failed - this could mean the encryption was done with a different key");
+      console.log("Trying legacy X25519 conversion approach as fallback");
       
       // As a fallback, try the old approach with ed2curve conversion
       try {
         // Extract seed from signature for key derivation
         if (signature.length < 32) {
-          console.error("❌ Signature too short for key derivation:", signature.length);
+          console.error("Signature too short for key derivation:", signature.length);
           throw new Error("Signature too short for key derivation");
         }
         
@@ -490,10 +405,7 @@ export function decryptAesKeyWithSignature(
           privateKeyBytes[31] |= 64;
         }
         
-        console.log("Fallback: using ed2curve-converted private key:", {
-          length: privateKeyBytes.length,
-          privateKeyHex: Array.from(privateKeyBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-        });
+        console.log("Using ed2curve-converted private key as fallback");
         
         // Try fallback decryption
         const fallbackResult = nacl.box.open(
@@ -504,7 +416,7 @@ export function decryptAesKeyWithSignature(
         );
         
         if (fallbackResult) {
-          console.log("✅ Fallback decryption successful!");
+          console.log("Fallback decryption successful");
           return fallbackResult;
         }
         
@@ -515,13 +427,7 @@ export function decryptAesKeyWithSignature(
       }
     }
 
-    console.log("✅ Decryption successful using deterministic keypair:", {
-      decryptedKeyLength: decryptedKeyBytes.length,
-      decryptedKeyHex: Array.from(decryptedKeyBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-    });
-    
-    console.log("🔓 SIGNATURE DECRYPTION COMPLETE --------------------------");
-    
+    console.log("Decryption successful using deterministic keypair, key length:", decryptedKeyBytes.length);
     return decryptedKeyBytes;
   } catch (error) {
     console.error("Failed to decrypt AES key with signature:", error);
@@ -541,41 +447,31 @@ export function decryptAesKeyWithWallet(
   walletPrivateKeyBytes: Uint8Array
 ): Uint8Array {
   try {
-    console.log("🔓 WALLET DECRYPTION START ------------------------------");
-    console.log("Private key details:", {
-      length: walletPrivateKeyBytes.length,
-      firstBytesHex: Array.from(walletPrivateKeyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('') + '...'
-    });
+    console.log("Starting wallet-based decryption process");
+    console.log("Private key length:", walletPrivateKeyBytes.length);
     
     // Convert base64 strings to Uint8Array
     const encryptedKeyBytes = base64ToUint8Array(encryptedKeyBase64);
     const nonceBytes = base64ToUint8Array(nonceBase64);
     const ephemeralPublicKeyBytes = base64ToUint8Array(ephemeralPublicKeyBase64);
     
-    console.log("Decoded binary data:", {
+    console.log("Processing encrypted inputs with lengths:", {
       encryptedKeyLength: encryptedKeyBytes.length,
-      encryptedKeyHex: Array.from(encryptedKeyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
       nonceLength: nonceBytes.length,
-      nonceHex: Array.from(nonceBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-      ephemeralPublicKeyLength: ephemeralPublicKeyBytes.length,
-      ephemeralPublicKeyHex: Array.from(ephemeralPublicKeyBytes.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
+      ephemeralPublicKeyLength: ephemeralPublicKeyBytes.length
     });
 
     // Convert Ed25519 private key to X25519 using our internal implementation
-    // First try our internal implementation
     let x25519PrivateKey = ed2curve.convertSecretKey(walletPrivateKeyBytes);
     if (!x25519PrivateKey) {
       console.warn("Internal ed2curve conversion failed, falling back to direct method");
       x25519PrivateKey = convertPrivateKeyToX25519(walletPrivateKeyBytes);
     }
     
-    console.log("Converted private key:", {
-      length: x25519PrivateKey.length,
-      firstBytesHex: Array.from(x25519PrivateKey.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join('') + '...'
-    });
+    console.log("Successfully converted private key for decryption");
 
     // Decrypt the AES key
-    console.log("Attempting decryption with nacl.box.open...");
+    console.log("Attempting decryption...");
     const decryptedKeyBytes = nacl.box.open(
       encryptedKeyBytes,
       nonceBytes,
@@ -584,19 +480,19 @@ export function decryptAesKeyWithWallet(
     );
 
     if (!decryptedKeyBytes) {
-      console.error("❌ Decryption failed - possibly invalid keys or corrupted data");
+      console.error("Decryption failed - possibly invalid keys or corrupted data");
       // Try additional diagnostics
       if (ephemeralPublicKeyBytes.length !== 32) {
-        console.error(`  - Ephemeral public key has invalid length: ${ephemeralPublicKeyBytes.length} (should be 32)`);
+        console.error(`Ephemeral public key has invalid length: ${ephemeralPublicKeyBytes.length} (should be 32)`);
       }
       if (nonceBytes.length !== 24) {
-        console.error(`  - Nonce has invalid length: ${nonceBytes.length} (should be 24)`);
+        console.error(`Nonce has invalid length: ${nonceBytes.length} (should be 24)`);
       }
       if (x25519PrivateKey.length !== 32) {
-        console.error(`  - Converted private key has invalid length: ${x25519PrivateKey.length} (should be 32)`);
+        console.error(`Converted private key has invalid length: ${x25519PrivateKey.length} (should be 32)`);
       }
       
-      console.log("Trying last-resort approach with direct key usage...");
+      console.log("Trying last-resort approach with direct key usage");
       // Last resort: try with the original key
       const lastResortResult = nacl.box.open(
         encryptedKeyBytes,
@@ -606,20 +502,14 @@ export function decryptAesKeyWithWallet(
       );
       
       if (lastResortResult) {
-        console.log("⚠️ Last resort approach worked! Returning result but this indicates a potential issue in key conversion");
+        console.log("Last resort approach worked! Returning result but this indicates a potential issue in key conversion");
         return lastResortResult;
       }
       
       throw new Error("Decryption failed - possibly invalid keys or corrupted data");
     }
 
-    console.log("✅ Decryption successful:", {
-      decryptedKeyLength: decryptedKeyBytes.length,
-      decryptedKeyHex: Array.from(decryptedKeyBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('') + '...',
-    });
-    
-    console.log("🔓 WALLET DECRYPTION COMPLETE --------------------------");
-    
+    console.log("Decryption successful, decrypted key length:", decryptedKeyBytes.length);
     return decryptedKeyBytes;
   } catch (error) {
     console.error("Failed to decrypt AES key with wallet:", error);
@@ -684,4 +574,4 @@ export const ed2curve = {
       return null;
     }
   }
-}; 
+};

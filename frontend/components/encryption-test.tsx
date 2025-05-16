@@ -184,7 +184,7 @@ export function EncryptionTest() {
       const ciphertext = encrypted.encrypted;
       const iv = encrypted.iv;
       
-      console.log("🔑 Using key:", {
+      console.log(" Using key:", {
         algorithm: key.algorithm,
         type: key.type,
         extractable: key.extractable,
@@ -212,7 +212,7 @@ export function EncryptionTest() {
         ciphertextBytes[i] = rawData.charCodeAt(i);
       }
       
-      console.log("🔐 Ciphertext bytes:", {
+      console.log(" Ciphertext bytes:", {
         base64: ciphertext,
         bytesLength: ciphertextBytes.length,
         firstBytes: Array.from(ciphertextBytes.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' '),

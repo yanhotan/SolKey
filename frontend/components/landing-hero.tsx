@@ -17,10 +17,10 @@ export function LandingHero() {
           transition={{ duration: 0.6 }}
         >
           <h1 className="text-4xl font-bold tracking-tighter sm:text-6xl md:text-6xl lg:text-7xl flex flex-col">
-            <span className="bg-clip-text text-transparent bg-solana-gradient animate-gradient-shift bg-[length:200%_auto] whitespace-nowrap">
+            <span className="bg-clip-text text-transparent bg-solana-gradient animate-gradient-shift bg-[size:200%_auto] whitespace-nowrap">
               Lock Down Your Env Secrets.
             </span>
-            <span className="bg-clip-text text-transparent bg-solana-gradient animate-gradient-shift bg-[length:200%_auto] whitespace-nowrap leading-[1.15]">
+            <span className="bg-clip-text text-transparent bg-solana-gradient animate-gradient-shift bg-[size:200%_auto] whitespace-nowrap leading-[1.15]">
               Only Your Wallet Holds the Key
             </span>
           </h1>

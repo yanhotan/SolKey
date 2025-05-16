@@ -10,6 +10,7 @@ import { AlertCircle, Shield, Check, Wallet, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
+import Image from "next/image";
 
 interface WalletAuthGateProps {
   children: React.ReactNode;
@@ -60,9 +61,22 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-background to-background/80 p-4 md:p-8">
+      <div className="mb-8 flex flex-col items-center">
+        <Image
+          src="/images/SolSecure_logo.png"
+          alt="SolSecure Logo"
+          width={64}
+          height={64}
+          className="h-16 w-16 mb-4"
+        />
+        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-solana-gradient animate-gradient-shift bg-[size:200%_auto]">
+          SolSecure
+        </h1>
+      </div>
+
       <Card className="w-full max-w-md border-purple-200/50 dark:border-purple-800/30 shadow-lg shadow-purple-500/10">
         <CardHeader className="bg-gradient-to-r from-purple-50/50 to-blue-50/50 dark:from-purple-950/30 dark:to-blue-950/30 rounded-t-lg border-b border-purple-100 dark:border-purple-800/20">
-          <CardTitle className="text-2xl bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
+          <CardTitle className="text-2xl bg-clip-text text-transparent bg-solana-gradient animate-gradient-shift bg-[size:200%_auto]">
             Wallet Authentication
           </CardTitle>
           <CardDescription>
@@ -103,7 +117,7 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
                 </div>
               ) : (
                 <WalletMultiButton
-                  className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 !h-9 px-4"
+                  className="bg-solana-gradient animate-gradient-shift bg-[length:200%_auto] shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 !h-9 px-4"
                 />
               )}
             </div>
@@ -117,7 +131,7 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
               <div className="flex-1">
                 <h3 className="font-medium">Step 2: Sign Message</h3>
                 <p className="text-sm text-muted-foreground">
-                  Signing a message is required when decrypting your secrets.
+                  Signing a message is required when encrypting and decrypting your secrets.
                 </p>
               </div>
             </div>

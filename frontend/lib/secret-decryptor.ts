@@ -166,7 +166,7 @@ export async function decryptWithDirectKey(
     // Convert base64 encrypted data to bytes
     const encryptedBytes = base64ToUint8Array(encryptedValue);
     
-    console.log('🔍 Decryption inputs:', {
+    console.log(' Decryption inputs:', {
       ivLength: ivBytes.length,
       encryptedLength: encryptedBytes.length,
       keyType: key.type

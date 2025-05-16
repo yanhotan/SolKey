@@ -3,7 +3,7 @@ import { TeamManagement } from "@/components/team-management"
 import { TeamInvite } from "@/components/team-invite"
 
 export const metadata: Metadata = {
-  title: "Team - SolSecrets",
+  title: "Team - SolSecure",
   description: "Manage your team members and permissions",
 }
 

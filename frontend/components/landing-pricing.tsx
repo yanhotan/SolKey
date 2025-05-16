@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useState } from "react"
 import { motion } from "framer-motion"
+import Image from "next/image"
 
 export function LandingPricing() {
   const [currency, setCurrency] = useState<"usdc" | "sol">("usdc")
@@ -32,7 +33,7 @@ export function LandingPricing() {
       name: "Pro",
       basePrice: 20,
       usdcPrice: "$20",
-      solPrice: "0.5 SOL",
+      solPrice: "0.095 SOL",
       description: "For growing teams with advanced needs",
       features: [
         "First 3 users included",
@@ -103,8 +104,14 @@ export function LandingPricing() {
                 USDC
               </TabsTrigger>
               <TabsTrigger value="sol" className="flex items-center gap-2">
-                <div className="h-5 w-5 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-xs">
-                  ◎
+                <div className="h-5 w-5 flex items-center justify-center">
+                  <Image
+                    src="/images/Solana_logo.png"
+                    alt="Solana Logo"
+                    width={20}
+                    height={20}
+                    className="w-5 h-5"
+                  />
                 </div>
                 SOL (15% off)
               </TabsTrigger>

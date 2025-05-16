@@ -67,8 +67,14 @@ export function DashboardPreview() {
       <div className="flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
         <div className="hidden md:block md:w-64 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-500 to-blue-500"></div>
-            <span className="font-bold">SolSecrets</span>
+            <div className="h-6 w-6">
+              <img
+                src="/images/SolSecure_logo.png"
+                alt="SolSecure Logo"
+                className="h-6 w-6"
+              />
+            </div>
+            <span className="font-bold bg-clip-text text-transparent bg-solana-gradient animate-gradient-shift bg-[size:200%_auto]">SolSecure</span>
           </div>
         </div>
         <div className="relative w-full max-w-md">
