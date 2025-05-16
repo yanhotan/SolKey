@@ -2,11 +2,11 @@
   "name": "solsecure",
   "version": "1.0.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "start": "pnpm --filter frontend start",
-    "build": "pnpm --filter frontend build"
+    "start:frontend": "pnpm --filter frontend start",
+    "start:backend": "pnpm --filter backend start",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev": "concurrently \"pnpm dev:frontend\" \"pnpm dev:backend\""
   },
   "dependencies": {
     "bs58": "^6.0.0",
@@ -14,5 +14,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }
