@@ -9,7 +9,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  output: "standalone",
+  // output: "standalone", // disable this to avoid symlink errors
   reactStrictMode: true,
   experimental: {},
 };

@@ -101,6 +101,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: 1.1.6
         version: 1.1.6(@types/react-dom@19.1.3(@types/react@19.1.3))(@types/react@19.1.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@solana/spl-token':
+        specifier: ^0.4.13
+        version: 0.4.13(@solana/web3.js@1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)(utf-8-validate@5.0.10)
       '@solana/wallet-adapter-base':
         specifier: ^0.9.26
         version: 0.9.26(@solana/web3.js@1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10))
@@ -145,7 +148,7 @@ importers:
         version: 8.5.1(react@19.1.0)
       framer-motion:
         specifier: latest
-        version: 12.10.5(@emotion/is-prop-valid@1.3.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+        version: 12.11.4(@emotion/is-prop-valid@1.3.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       input-otp:
         specifier: 1.4.1
         version: 1.4.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -159,13 +162,13 @@ importers:
         specifier: latest
         version: 0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react:
-        specifier: ^19
+        specifier: ^19.1.0
         version: 19.1.0
       react-day-picker:
         specifier: 8.10.1
         version: 8.10.1(date-fns@4.1.0)(react@19.1.0)
       react-dom:
-        specifier: ^19
+        specifier: ^19.1.0
         version: 19.1.0(react@19.1.0)
       react-hook-form:
         specifier: ^7.54.1
@@ -201,6 +204,9 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.1.3(@types/react@19.1.3)
+      pino-pretty:
+        specifier: ^13.0.0
+        version: 13.0.0
       postcss:
         specifier: ^8
         version: 8.5.3
@@ -1770,13 +1776,27 @@ packages:
     peerDependencies:
       typescript: '>=5'
 
+  '@solana/buffer-layout-utils@0.2.0':
+    resolution: {integrity: sha512-szG4sxgJGktbuZYDg2FfNmkMi0DYQoVjN2h7ta1W1hPrwzarcFLBq9UpX1UjNXsNpT9dn+chgprtWGioUAr4/g==}
+    engines: {node: '>= 10'}
+
   '@solana/buffer-layout@4.0.1':
     resolution: {integrity: sha512-E1ImOIAD1tBZFRdjeM4/pzTiTApC0AOBGwyAMS4fwIodCWArzJ3DWdoh8cKxeFM2fElkxBh2Aqts1BPC373rHA==}
     engines: {node: '>=5.10'}
 
+  '@solana/codecs-core@2.0.0-rc.1':
+    resolution: {integrity: sha512-bauxqMfSs8EHD0JKESaNmNuNvkvHSuN3bbWAF5RjOfDu2PugxHrvRebmYauvSumZ3cTfQ4HJJX6PG5rN852qyQ==}
+    peerDependencies:
+      typescript: '>=5'
+
   '@solana/codecs-core@2.1.0':
     resolution: {integrity: sha512-SR7pKtmJBg2mhmkel2NeHA1pz06QeQXdMv8WJoIR9m8F/hw80K/612uaYbwTt2nkK0jg/Qn/rNSd7EcJ4SBGjw==}
     engines: {node: '>=20.18.0'}
+    peerDependencies:
+      typescript: '>=5'
+
+  '@solana/codecs-data-structures@2.0.0-rc.1':
+    resolution: {integrity: sha512-rinCv0RrAVJ9rE/rmaibWJQxMwC5lSaORSZuwjopSUE6T0nb/MVg6Z1siNCXhh/HFTOg0l8bNvZHgBcN/yvXog==}
     peerDependencies:
       typescript: '>=5'
 
@@ -1786,10 +1806,21 @@ packages:
     peerDependencies:
       typescript: '>=5'
 
+  '@solana/codecs-numbers@2.0.0-rc.1':
+    resolution: {integrity: sha512-J5i5mOkvukXn8E3Z7sGIPxsThRCgSdgTWJDQeZvucQ9PT6Y3HiVXJ0pcWiOWAoQ3RX8e/f4I3IC+wE6pZiJzDQ==}
+    peerDependencies:
+      typescript: '>=5'
+
   '@solana/codecs-numbers@2.1.0':
     resolution: {integrity: sha512-XMu4yw5iCgQnMKsxSWPPOrGgtaohmupN3eyAtYv3K3C/MJEc5V90h74k5B1GUCiHvcrdUDO9RclNjD9lgbjFag==}
     engines: {node: '>=20.18.0'}
     peerDependencies:
+      typescript: '>=5'
+
+  '@solana/codecs-strings@2.0.0-rc.1':
+    resolution: {integrity: sha512-9/wPhw8TbGRTt6mHC4Zz1RqOnuPTqq1Nb4EyuvpZ39GW6O2t2Q7Q0XxiB3+BdoEjwA2XgPw6e2iRfvYgqty44g==}
+    peerDependencies:
+      fastestsmallesttextencoderdecoder: ^1.0.22
       typescript: '>=5'
 
   '@solana/codecs-strings@2.1.0':
@@ -1799,9 +1830,20 @@ packages:
       fastestsmallesttextencoderdecoder: ^1.0.22
       typescript: '>=5'
 
+  '@solana/codecs@2.0.0-rc.1':
+    resolution: {integrity: sha512-qxoR7VybNJixV51L0G1RD2boZTcxmwUWnKCaJJExQ5qNKwbpSyDdWfFJfM5JhGyKe9DnPVOZB+JHWXnpbZBqrQ==}
+    peerDependencies:
+      typescript: '>=5'
+
   '@solana/codecs@2.1.0':
     resolution: {integrity: sha512-C0TnfrpbTg7zoIFYfM65ofeL2AWEz80OsD6mjVdcTKpb1Uj7XuBuNLss3dMnatPQaL7RagD9VLA5/WfYayyteQ==}
     engines: {node: '>=20.18.0'}
+    peerDependencies:
+      typescript: '>=5'
+
+  '@solana/errors@2.0.0-rc.1':
+    resolution: {integrity: sha512-ejNvQ2oJ7+bcFAYWj225lyRkHnixuAeb7RQCixm+5mH4n1IA4Qya/9Bmfy5RAAHQzxK43clu3kZmL5eF9VGtYQ==}
+    hasBin: true
     peerDependencies:
       typescript: '>=5'
 
@@ -1839,6 +1881,11 @@ packages:
   '@solana/kit@2.1.0':
     resolution: {integrity: sha512-vqaHROLKp89xdIbaKVG6BQ44uMN9E6/rSTeltkvquD2qdTObssafGDbAKVFjwZhlNO+sdzHDCLekGabn5VAL6A==}
     engines: {node: '>=20.18.0'}
+    peerDependencies:
+      typescript: '>=5'
+
+  '@solana/options@2.0.0-rc.1':
+    resolution: {integrity: sha512-mLUcR9mZ3qfHlmMnREdIFPf9dpMc/Bl66tLSOOWxw4ml5xMT2ohFn7WGqoKcu/UHkT9CrC6+amEdqCNvUqI7AA==}
     peerDependencies:
       typescript: '>=5'
 
@@ -1938,6 +1985,24 @@ packages:
     engines: {node: '>=20.18.0'}
     peerDependencies:
       typescript: '>=5'
+
+  '@solana/spl-token-group@0.0.7':
+    resolution: {integrity: sha512-V1N/iX7Cr7H0uazWUT2uk27TMqlqedpXHRqqAbVO2gvmJyT0E0ummMEAVQeXZ05ZhQ/xF39DLSdBp90XebWEug==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      '@solana/web3.js': ^1.95.3
+
+  '@solana/spl-token-metadata@0.1.6':
+    resolution: {integrity: sha512-7sMt1rsm/zQOQcUWllQX9mD2O6KhSAtY1hFR2hfFwgqfFWzSY9E9GDvFVNYUI1F0iQKcm6HmePU9QbKRXTEBiA==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      '@solana/web3.js': ^1.95.3
+
+  '@solana/spl-token@0.4.13':
+    resolution: {integrity: sha512-cite/pYWQZZVvLbg5lsodSovbetK/eA24gaR0eeUeMuBAMNrT8XFCwaygKy0N2WSg3gSyjjNpIeAGBAKZaY/1w==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      '@solana/web3.js': ^1.95.5
 
   '@solana/subscribable@2.1.0':
     resolution: {integrity: sha512-xi12Cm889+uT5sRKnIzr7nLnHAp3hiR3dqIzrT1P7z7iEGp8OnqUQIQCHlgozFHM2cPW+6685NQXk1l1ImuJIw==}
@@ -2847,6 +2912,10 @@ packages:
   big.js@6.2.2:
     resolution: {integrity: sha512-y/ie+Faknx7sZA5MfGA2xKlu0GDv8RWrXGsmlteyJQ2lvoKv9GBK/fpRMc2qlSoBAgNxrixICFCBefIq8WCQpQ==}
 
+  bigint-buffer@1.1.5:
+    resolution: {integrity: sha512-trfYco6AoZ+rKhKnxA0hgX0HAbVP/s808/EuDSe2JDzUnCp/xAsli35Orvk67UrTEcwuxZqYZDmfA2RXJgxVvA==}
+    engines: {node: '>= 10.0.0'}
+
   bignumber.js@9.3.0:
     resolution: {integrity: sha512-EM7aMFTXbptt/wZdMlBv2t8IViwQL+h6SLHosp8Yf0dqJMTnY6iL32opnAB6kAdL0SZPuvcAzFr31o0c/R3/RA==}
 
@@ -3075,6 +3144,9 @@ packages:
     resolution: {integrity: sha512-1rXeuUUiGGrykh+CeBdu5Ie7OJwinCgQY0bc7GCRxy5xVHy+moaqkpL/jqQq0MtQOeYcrqEz4abc5f0KtU7W4A==}
     engines: {node: '>=12.5.0'}
 
+  colorette@2.0.20:
+    resolution: {integrity: sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w==}
+
   combined-stream@1.0.8:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
     engines: {node: '>= 0.8'}
@@ -3206,6 +3278,9 @@ packages:
 
   date-fns@4.1.0:
     resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
+
+  dateformat@4.6.3:
+    resolution: {integrity: sha512-2P0p0pFGzHS5EMnhdxQi7aJN+iMheud0UhG4dlE1DLAlvL8JHjJJTX/CSm4JXwV0Ka5nGk3zC5mcb5bUQUxxMA==}
 
   dayjs@1.11.13:
     resolution: {integrity: sha512-oaMBel6gjolK862uaPQOVTA7q3TZhuSvuMQAAglQDOWYO9A91IrAOUJEyKVlqJlHE0vq5p5UXxzdPfMH/x6xNg==}
@@ -3466,6 +3541,9 @@ packages:
     resolution: {integrity: sha512-GipyPsXO1anza0AOZdy69Im7hGFCNB7Y/NGjDlZGJ3GJJLtwNSb2vrzYrTYJRrRloVx7pl+bhUaTB8yiccPvFQ==}
     engines: {node: '> 0.1.90'}
 
+  fast-copy@3.0.2:
+    resolution: {integrity: sha512-dl0O9Vhju8IrcLndv2eU4ldt1ftXMqqfgN4H1cpmGV7P6jeB9FwpN9a2c8DPGE1Ys88rNUJVYDHq73CGAGOPfQ==}
+
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
@@ -3536,8 +3614,8 @@ packages:
   fraction.js@4.3.7:
     resolution: {integrity: sha512-ZsDfxO51wGAXREY55a7la9LScWpwv9RxIrYABrlvOFBlH/ShPnrtsXeuUIfXKKOVicNxQ+o8JTbJvjS4M89yew==}
 
-  framer-motion@12.10.5:
-    resolution: {integrity: sha512-p6VF1YkwWvNDFzg5IQ5lqPx11Td4TQ6LqDnshV7sWj0Nrp4dwz2/aEzmgh9WA9ridcTIJ625Fr0oiuhgqIoFwQ==}
+  framer-motion@12.11.4:
+    resolution: {integrity: sha512-kyE5oWZCUxhDb7LtpEyyadNThJJvoE8a6bfUTBqz++zw3XxDOosPAvw1lqNhYbjOgy57YuAlJ5qG/Cx5BigiEQ==}
     peerDependencies:
       '@emotion/is-prop-valid': '*'
       react: ^18.0.0 || ^19.0.0
@@ -3647,6 +3725,9 @@ packages:
   hasown@2.0.2:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
+
+  help-me@5.0.0:
+    resolution: {integrity: sha512-7xgomUX6ADmcYzFik0HzAxh/73YlKR9bmFzf51CZwR+b6YtzU2m0u49hQCqV6SvlqIqsaxovfwdvbnsw3b/zpg==}
 
   hermes-estree@0.25.1:
     resolution: {integrity: sha512-0wUoCcLp+5Ev5pDW2OriHC2MJCbwLwuRx+gAqMTOkGKJJiBCLjtrvy4PWUGn6MIVefecRpzoOZ/UV6iGdOr+Cw==}
@@ -3871,6 +3952,10 @@ packages:
   jiti@1.21.7:
     resolution: {integrity: sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==}
     hasBin: true
+
+  joycon@3.1.1:
+    resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
+    engines: {node: '>=10'}
 
   js-base64@3.7.7:
     resolution: {integrity: sha512-7rCnleh0z2CkXhH67J8K1Ytz0b2Y+yxTPL+/KOJoa20hfnVQ/3/T6W/KflYI4bRHRagNeXeU2bkNGI3v1oS/lw==}
@@ -4111,6 +4196,9 @@ packages:
     resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
     engines: {node: '>=16 || 14 >=14.17'}
 
+  minimist@1.2.8:
+    resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
+
   minipass@7.1.2:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
@@ -4120,8 +4208,8 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  motion-dom@12.10.5:
-    resolution: {integrity: sha512-F7XKmhxXEH/y3aWWf0N2w69wNSN+6PcJ1seqR1WolClmXpPhj+xwzs9j5CpsMFzeHR1D7irl3JcWMToPRwX6Hg==}
+  motion-dom@12.11.4:
+    resolution: {integrity: sha512-1z/qYsrDjSx5QjOH8GfJ2RfFBvEzI2gdAEt2zNW+f7QkLlqjM3sQieESJr5+QtVmvD81qPANM7t97ROixKIt9Q==}
 
   motion-utils@12.9.4:
     resolution: {integrity: sha512-BW3I65zeM76CMsfh3kHid9ansEJk9Qvl+K5cu4DVHKGsI52n76OJ4z2CUJUV+Mn3uEP9k1JJA3tClG0ggSrRcg==}
@@ -4254,6 +4342,10 @@ packages:
   on-exit-leak-free@0.2.0:
     resolution: {integrity: sha512-dqaz3u44QbRXQooZLTUKU41ZrzYrcvLISVgbrzbyCMxpmSLJvZ3ZamIJIZ29P6OhZIkNIQKosdeM6t1LYbA9hg==}
 
+  on-exit-leak-free@2.1.2:
+    resolution: {integrity: sha512-0eJJY6hXLGf1udHwfNftBqH+g73EU4B504nZeKpz1sYRKafAghwxEJunB2O7rDZkL4PGfsMVnTXZ2EjibbqcsA==}
+    engines: {node: '>=14.0.0'}
+
   on-finished@2.3.0:
     resolution: {integrity: sha512-ikqdkGAAyf/X/gPhXGvfgAytDZtDbr+bkNUJ0N9h5MI/dmdgCs3l6hoHrcUv41sRKew3jIwrp4qQDXiK99Utww==}
     engines: {node: '>= 0.8'}
@@ -4348,6 +4440,13 @@ packages:
 
   pino-abstract-transport@0.5.0:
     resolution: {integrity: sha512-+KAgmVeqXYbTtU2FScx1XS3kNyfZ5TrXY07V96QnUSFqo2gAqlvmaxH67Lj7SWazqsMabf+58ctdTcBgnOLUOQ==}
+
+  pino-abstract-transport@2.0.0:
+    resolution: {integrity: sha512-F63x5tizV6WCh4R6RHyi2Ml+M70DNRXt/+HANowMflpgGFMAym/VKm6G7ZOQRjqN7XbGxK1Lg9t6ZrtzOaivMw==}
+
+  pino-pretty@13.0.0:
+    resolution: {integrity: sha512-cQBBIVG3YajgoUjo1FdKVRX6t9XPxwB9lcNJVD5GCnNM4Y6T12YYx8c6zEejxQsU0wrg9TwmDulcE9LR7qcJqA==}
+    hasBin: true
 
   pino-std-serializers@4.0.0:
     resolution: {integrity: sha512-cK0pekc1Kjy5w9V2/n+8MkZwusa6EyyxfeQCB799CQRhRt/CqYKiWs5adeu8Shve2ZNffvfC/7J64A2PJo1W/Q==}
@@ -4963,6 +5062,9 @@ packages:
   sdp@2.12.0:
     resolution: {integrity: sha512-jhXqQAQVM+8Xj5EjJGVweuEzgtGWb3tmEEpl3CLP3cStInSbVHSg0QWOGQzNq8pSID4JkpeV2mPqlMDLrm0/Vw==}
 
+  secure-json-parse@2.7.0:
+    resolution: {integrity: sha512-6aU+Rwsezw7VR8/nyvKTx8QpWH9FrcYiXXlqC4z5d5XQBDRqtbfsRjnwGyqbi3gddNtWHuEk9OANUotL26qKUw==}
+
   semver@6.3.1:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
@@ -5050,6 +5152,9 @@ packages:
 
   sonic-boom@2.8.0:
     resolution: {integrity: sha512-kuonw1YOYYNOve5iHdSahXPOK49GqwA+LZhI6Wz/l0rP57iKyXXIHaRagOBHAPmGwJC6od2Z9zgvZ5loSgMlVg==}
+
+  sonic-boom@4.2.0:
+    resolution: {integrity: sha512-INb7TM37/mAcsGmc9hyyI6+QR3rR1zVRu36B0NeGXKnOOLiZOfER5SA+N7X7k3yUYRzLWafduTDvJAfDswwEww==}
 
   sonner@1.7.4:
     resolution: {integrity: sha512-DIS8z4PfJRbIyfVFDVnK9rO3eYDtse4Omcm6bt0oEr5/jtLgysmjuBl1frJ9E/EQZrFmKx2A8m/s5s9CRXIzhw==}
@@ -5149,6 +5254,10 @@ packages:
   strip-ansi@7.1.0:
     resolution: {integrity: sha512-iq6eVVI64nQQTRYq2KtEg2d2uU7LElhTJwsH4YzIHZshxlgZms/wIc4VoDQTlG/IvVIrBKG06CrZnp0qv7hkcQ==}
     engines: {node: '>=12'}
+
+  strip-json-comments@3.1.1:
+    resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
+    engines: {node: '>=8'}
 
   styled-jsx@5.1.6:
     resolution: {integrity: sha512-qSVyDTeMotdvQYoHWLNGwRFJHC+i+ZvdBRYosOFgC+Wg1vx4frN2/RG/NA7SYqqvKNLf39P2LSRA2pu6n0XYZA==}
@@ -7441,8 +7550,8 @@ snapshots:
 
   '@scure/bip32@1.6.2':
     dependencies:
-      '@noble/curves': 1.8.1
-      '@noble/hashes': 1.7.1
+      '@noble/curves': 1.8.2
+      '@noble/hashes': 1.7.2
       '@scure/base': 1.2.5
 
   '@scure/bip32@1.7.0':
@@ -7458,7 +7567,7 @@ snapshots:
 
   '@scure/bip39@1.5.4':
     dependencies:
-      '@noble/hashes': 1.7.1
+      '@noble/hashes': 1.7.2
       '@scure/base': 1.2.5
 
   '@scure/bip39@1.6.0':
@@ -7582,13 +7691,37 @@ snapshots:
       '@solana/errors': 2.1.0(typescript@5.8.3)
       typescript: 5.8.3
 
+  '@solana/buffer-layout-utils@0.2.0(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@solana/buffer-layout': 4.0.1
+      '@solana/web3.js': 1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)
+      bigint-buffer: 1.1.5
+      bignumber.js: 9.3.0
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - typescript
+      - utf-8-validate
+
   '@solana/buffer-layout@4.0.1':
     dependencies:
       buffer: 6.0.3
 
+  '@solana/codecs-core@2.0.0-rc.1(typescript@5.8.3)':
+    dependencies:
+      '@solana/errors': 2.0.0-rc.1(typescript@5.8.3)
+      typescript: 5.8.3
+
   '@solana/codecs-core@2.1.0(typescript@5.8.3)':
     dependencies:
       '@solana/errors': 2.1.0(typescript@5.8.3)
+      typescript: 5.8.3
+
+  '@solana/codecs-data-structures@2.0.0-rc.1(typescript@5.8.3)':
+    dependencies:
+      '@solana/codecs-core': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/codecs-numbers': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/errors': 2.0.0-rc.1(typescript@5.8.3)
       typescript: 5.8.3
 
   '@solana/codecs-data-structures@2.1.0(typescript@5.8.3)':
@@ -7598,10 +7731,24 @@ snapshots:
       '@solana/errors': 2.1.0(typescript@5.8.3)
       typescript: 5.8.3
 
+  '@solana/codecs-numbers@2.0.0-rc.1(typescript@5.8.3)':
+    dependencies:
+      '@solana/codecs-core': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/errors': 2.0.0-rc.1(typescript@5.8.3)
+      typescript: 5.8.3
+
   '@solana/codecs-numbers@2.1.0(typescript@5.8.3)':
     dependencies:
       '@solana/codecs-core': 2.1.0(typescript@5.8.3)
       '@solana/errors': 2.1.0(typescript@5.8.3)
+      typescript: 5.8.3
+
+  '@solana/codecs-strings@2.0.0-rc.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)':
+    dependencies:
+      '@solana/codecs-core': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/codecs-numbers': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/errors': 2.0.0-rc.1(typescript@5.8.3)
+      fastestsmallesttextencoderdecoder: 1.0.22
       typescript: 5.8.3
 
   '@solana/codecs-strings@2.1.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)':
@@ -7611,6 +7758,17 @@ snapshots:
       '@solana/errors': 2.1.0(typescript@5.8.3)
       fastestsmallesttextencoderdecoder: 1.0.22
       typescript: 5.8.3
+
+  '@solana/codecs@2.0.0-rc.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)':
+    dependencies:
+      '@solana/codecs-core': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/codecs-data-structures': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/codecs-numbers': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/codecs-strings': 2.0.0-rc.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)
+      '@solana/options': 2.0.0-rc.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - fastestsmallesttextencoderdecoder
 
   '@solana/codecs@2.1.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)':
     dependencies:
@@ -7622,6 +7780,12 @@ snapshots:
       typescript: 5.8.3
     transitivePeerDependencies:
       - fastestsmallesttextencoderdecoder
+
+  '@solana/errors@2.0.0-rc.1(typescript@5.8.3)':
+    dependencies:
+      chalk: 5.4.1
+      commander: 12.1.0
+      typescript: 5.8.3
 
   '@solana/errors@2.1.0(typescript@5.8.3)':
     dependencies:
@@ -7677,6 +7841,17 @@ snapshots:
     transitivePeerDependencies:
       - fastestsmallesttextencoderdecoder
       - ws
+
+  '@solana/options@2.0.0-rc.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)':
+    dependencies:
+      '@solana/codecs-core': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/codecs-data-structures': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/codecs-numbers': 2.0.0-rc.1(typescript@5.8.3)
+      '@solana/codecs-strings': 2.0.0-rc.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)
+      '@solana/errors': 2.0.0-rc.1(typescript@5.8.3)
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - fastestsmallesttextencoderdecoder
 
   '@solana/options@2.1.0(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)':
     dependencies:
@@ -7836,6 +8011,37 @@ snapshots:
       typescript: 5.8.3
     transitivePeerDependencies:
       - fastestsmallesttextencoderdecoder
+
+  '@solana/spl-token-group@0.0.7(@solana/web3.js@1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)':
+    dependencies:
+      '@solana/codecs': 2.0.0-rc.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)
+      '@solana/web3.js': 1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - fastestsmallesttextencoderdecoder
+      - typescript
+
+  '@solana/spl-token-metadata@0.1.6(@solana/web3.js@1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)':
+    dependencies:
+      '@solana/codecs': 2.0.0-rc.1(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)
+      '@solana/web3.js': 1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - fastestsmallesttextencoderdecoder
+      - typescript
+
+  '@solana/spl-token@0.4.13(@solana/web3.js@1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10))(bufferutil@4.0.9)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@solana/buffer-layout': 4.0.1
+      '@solana/buffer-layout-utils': 0.2.0(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)
+      '@solana/spl-token-group': 0.0.7(@solana/web3.js@1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)
+      '@solana/spl-token-metadata': 0.1.6(@solana/web3.js@1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10))(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.8.3)
+      '@solana/web3.js': 1.98.2(bufferutil@4.0.9)(typescript@5.8.3)(utf-8-validate@5.0.10)
+      buffer: 6.0.3
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - fastestsmallesttextencoderdecoder
+      - typescript
+      - utf-8-validate
 
   '@solana/subscribable@2.1.0(typescript@5.8.3)':
     dependencies:
@@ -9668,6 +9874,10 @@ snapshots:
 
   big.js@6.2.2: {}
 
+  bigint-buffer@1.1.5:
+    dependencies:
+      bindings: 1.5.0
+
   bignumber.js@9.3.0: {}
 
   binary-extensions@2.3.0: {}
@@ -9956,6 +10166,8 @@ snapshots:
       color-convert: 2.0.1
       color-string: 1.9.1
 
+  colorette@2.0.20: {}
+
   combined-stream@1.0.8:
     dependencies:
       delayed-stream: 1.0.0
@@ -10106,6 +10318,8 @@ snapshots:
   d3-timer@3.0.1: {}
 
   date-fns@4.1.0: {}
+
+  dateformat@4.6.3: {}
 
   dayjs@1.11.13: {}
 
@@ -10335,6 +10549,8 @@ snapshots:
 
   eyes@0.1.8: {}
 
+  fast-copy@3.0.2: {}
+
   fast-deep-equal@3.1.3: {}
 
   fast-equals@5.2.2: {}
@@ -10410,9 +10626,9 @@ snapshots:
 
   fraction.js@4.3.7: {}
 
-  framer-motion@12.10.5(@emotion/is-prop-valid@1.3.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
+  framer-motion@12.11.4(@emotion/is-prop-valid@1.3.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
     dependencies:
-      motion-dom: 12.10.5
+      motion-dom: 12.11.4
       motion-utils: 12.9.4
       tslib: 2.8.1
     optionalDependencies:
@@ -10526,6 +10742,8 @@ snapshots:
   hasown@2.0.2:
     dependencies:
       function-bind: 1.1.2
+
+  help-me@5.0.0: {}
 
   hermes-estree@0.25.1: {}
 
@@ -10798,6 +11016,8 @@ snapshots:
       supports-color: 8.1.1
 
   jiti@1.21.7: {}
+
+  joycon@3.1.1: {}
 
   js-base64@3.7.7: {}
 
@@ -11133,11 +11353,13 @@ snapshots:
     dependencies:
       brace-expansion: 2.0.1
 
+  minimist@1.2.8: {}
+
   minipass@7.1.2: {}
 
   mkdirp@1.0.4: {}
 
-  motion-dom@12.10.5:
+  motion-dom@12.11.4:
     dependencies:
       motion-utils: 12.9.4
 
@@ -11249,6 +11471,8 @@ snapshots:
 
   on-exit-leak-free@0.2.0: {}
 
+  on-exit-leak-free@2.1.2: {}
+
   on-finished@2.3.0:
     dependencies:
       ee-first: 1.1.1
@@ -11269,10 +11493,10 @@ snapshots:
   ox@0.6.7(typescript@5.8.3)(zod@3.24.4):
     dependencies:
       '@adraffy/ens-normalize': 1.11.0
-      '@noble/curves': 1.8.1
+      '@noble/curves': 1.9.0
       '@noble/hashes': 1.8.0
-      '@scure/bip32': 1.6.2
-      '@scure/bip39': 1.5.4
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
       abitype: 1.0.8(typescript@5.8.3)(zod@3.24.4)
       eventemitter3: 5.0.1
     optionalDependencies:
@@ -11283,10 +11507,10 @@ snapshots:
   ox@0.6.9(typescript@5.8.3)(zod@3.22.4):
     dependencies:
       '@adraffy/ens-normalize': 1.11.0
-      '@noble/curves': 1.8.2
+      '@noble/curves': 1.9.0
       '@noble/hashes': 1.8.0
-      '@scure/bip32': 1.6.2
-      '@scure/bip39': 1.5.4
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
       abitype: 1.0.8(typescript@5.8.3)(zod@3.22.4)
       eventemitter3: 5.0.1
     optionalDependencies:
@@ -11297,10 +11521,10 @@ snapshots:
   ox@0.6.9(typescript@5.8.3)(zod@3.24.4):
     dependencies:
       '@adraffy/ens-normalize': 1.11.0
-      '@noble/curves': 1.8.2
+      '@noble/curves': 1.9.0
       '@noble/hashes': 1.8.0
-      '@scure/bip32': 1.6.2
-      '@scure/bip39': 1.5.4
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
       abitype: 1.0.8(typescript@5.8.3)(zod@3.24.4)
       eventemitter3: 5.0.1
     optionalDependencies:
@@ -11367,6 +11591,26 @@ snapshots:
     dependencies:
       duplexify: 4.1.3
       split2: 4.2.0
+
+  pino-abstract-transport@2.0.0:
+    dependencies:
+      split2: 4.2.0
+
+  pino-pretty@13.0.0:
+    dependencies:
+      colorette: 2.0.20
+      dateformat: 4.6.3
+      fast-copy: 3.0.2
+      fast-safe-stringify: 2.1.1
+      help-me: 5.0.0
+      joycon: 3.1.1
+      minimist: 1.2.8
+      on-exit-leak-free: 2.1.2
+      pino-abstract-transport: 2.0.0
+      pump: 3.0.2
+      secure-json-parse: 2.7.0
+      sonic-boom: 4.2.0
+      strip-json-comments: 3.1.1
 
   pino-std-serializers@4.0.0: {}
 
@@ -12171,6 +12415,8 @@ snapshots:
 
   sdp@2.12.0: {}
 
+  secure-json-parse@2.7.0: {}
+
   semver@6.3.1: {}
 
   semver@7.7.1: {}
@@ -12304,6 +12550,10 @@ snapshots:
     dependencies:
       atomic-sleep: 1.0.0
 
+  sonic-boom@4.2.0:
+    dependencies:
+      atomic-sleep: 1.0.0
+
   sonner@1.7.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
     dependencies:
       react: 19.1.0
@@ -12388,6 +12638,8 @@ snapshots:
   strip-ansi@7.1.0:
     dependencies:
       ansi-regex: 6.1.0
+
+  strip-json-comments@3.1.1: {}
 
   styled-jsx@5.1.6(@babel/core@7.27.1)(react@19.1.0):
     dependencies:
