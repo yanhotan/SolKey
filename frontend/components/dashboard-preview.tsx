@@ -165,16 +165,22 @@ export function DashboardPreview() {
                 Activity
               </div>
             </div>
-          </div>
-
-          {/* Environment tabs */}
+          </div>          {/* Environment tabs */}
           <div className="mb-6 flex gap-2">
             {["development", "staging", "production"].map((env) => (
               <div
                 key={env}
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium",
-                  activeTab === env ? "bg-secondary text-secondary-foreground" : "bg-muted/50 text-muted-foreground",
+                  "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium border",
+                  activeTab === env 
+                    ? env === "development"
+                      ? "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border-blue-300"
+                      : env === "staging"
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border-amber-300"
+                      : env === "production"
+                      ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400 border-green-300"
+                      : "bg-secondary text-secondary-foreground"
+                    : "bg-muted/50 text-muted-foreground border-transparent"
                 )}
                 onClick={() => setActiveTab(env)}
               >
@@ -245,23 +251,26 @@ export function DashboardPreview() {
             </div>
             {secrets.map((secret) => (
               <div key={secret.id} className="grid grid-cols-12 gap-4 border-b p-4 text-sm">
-                <div className="col-span-3 font-medium font-mono">{secret.key}</div>
-                <div className="col-span-6 flex items-center gap-2">
-                  <div className="font-mono text-xs">
-                    {visibleSecrets[secret.id] ? (
-                      secret.value
-                    ) : (
-                      <span className="text-muted-foreground">•••••••••••••••</span>
-                    )}
-                  </div>
-                  <div
-                    className="flex h-6 w-6 items-center justify-center rounded-md bg-muted/50 cursor-pointer"
-                    onClick={() => toggleSecretVisibility(secret.id)}
-                  >
-                    {visibleSecrets[secret.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                  </div>
-                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-muted/50 cursor-pointer">
-                    <Copy className="h-3 w-3" />
+                <div className="col-span-3 font-medium font-mono">{secret.key}</div>                <div className="col-span-6">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="font-mono text-xs">
+                      {visibleSecrets[secret.id] ? (
+                        secret.value
+                      ) : (
+                        <span className="text-muted-foreground">•••••••••••••••</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div
+                        className="flex h-6 w-6 items-center justify-center rounded-md bg-muted/50 cursor-pointer"
+                        onClick={() => toggleSecretVisibility(secret.id)}
+                      >
+                        {visibleSecrets[secret.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                      </div>
+                      <div className="flex h-6 w-6 items-center justify-center rounded-md bg-muted/50 cursor-pointer">
+                        <Copy className="h-3 w-3" />
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="col-span-2">
