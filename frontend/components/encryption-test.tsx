@@ -277,7 +277,7 @@ export function EncryptionTest() {
   return (
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
-        <CardTitle>Frontend Encryption Test</CardTitle>
+        <CardTitle>Encryption Test</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* WebCrypto Support */}
