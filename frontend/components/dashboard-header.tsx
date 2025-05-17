@@ -57,7 +57,7 @@ export function DashboardHeader() {
       <Link href="/dashboard" className="flex items-center gap-2">
         <div className="h-6 w-6">
           <Image 
-            src="/images/SolSecure_logo.png" 
+            src="/images/solsecure_logo.png" 
             alt="SolSecure Logo" 
             width={24} 
             height={24} 

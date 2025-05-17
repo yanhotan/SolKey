@@ -17,7 +17,7 @@ export function WalletSteps() {
         <div className="relative">
           <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-400/20 to-blue-400/20 blur-lg"></div>
           <Image 
-            src="/images/SolSecure_logo.png" 
+            src="/images/solsecure_logo.png" 
             alt="SolSecure Logo" 
             width={48} 
             height={48} 

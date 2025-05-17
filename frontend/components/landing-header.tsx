@@ -24,7 +24,7 @@ export function LandingHeader() {
               transition={{ type: "spring", stiffness: 200 }}
             >
               <Image 
-                src="/images/SolSecure_logo.png" 
+                src="/images/solsecure_logo.png" 
                 alt="SolSecure Logo" 
                 width={32} 
                 height={32} 

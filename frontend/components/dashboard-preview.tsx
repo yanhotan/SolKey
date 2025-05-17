@@ -69,7 +69,7 @@ export function DashboardPreview() {
           <div className="flex items-center gap-2">
             <div className="h-6 w-6">
               <img
-                src="/images/SolSecure_logo.png"
+                src="/images/solsecure_logo.png"
                 alt="SolSecure Logo"
                 className="h-6 w-6"
               />

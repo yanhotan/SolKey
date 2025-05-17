@@ -63,7 +63,7 @@ export function WalletAuthGate({ children }: WalletAuthGateProps) {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-background to-background/80 p-4 md:p-8">
       <div className="mb-8 flex flex-col items-center">
         <Image
-          src="/images/SolSecure_logo.png"
+          src="/images/solsecure_logo.png"
           alt="SolSecure Logo"
           width={64}
           height={64}
