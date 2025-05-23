@@ -32,6 +32,7 @@ import { toast } from "@/hooks/use-toast";
 import { useWalletEncryption } from "@/hooks/use-wallet-encryption";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { EncryptedData } from "@/lib/crypto";
+import { usePermissionProgram } from "@/hooks/usePermissionProgram";
 
 type Secret = {
   id: string;
@@ -50,14 +51,20 @@ export function SecretsTable({
   projectId,
   environment,
   searchQuery,
+  projectOwner,
 }: {
   projectId: string;
   environment: string;
   searchQuery: string;
+  projectOwner: string;
 }) {
   const [secrets, setSecrets] = useState<Secret[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasPermission, setHasPermission] = useState(false);
+
+  // Add permission program hook
+  const { checkIsMember, loading: permissionLoading, error: permissionError } = usePermissionProgram();
 
   // State for visible secrets
   const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>(
@@ -71,6 +78,32 @@ export function SecretsTable({
   const { publicKey, connected } = useWallet();
   const { isInitialized, handleSignMessage, decryptData } =
     useWalletEncryption();
+
+  // Check permission when wallet connects
+  useEffect(() => {
+    async function checkPermission() {
+      if (!connected || !publicKey || !projectOwner) return;
+
+      const walletAddress = publicKey.toBase58();
+      
+      // If connected wallet is the project owner, they automatically have permission
+      if (walletAddress === projectOwner) {
+        setHasPermission(true);
+        return;
+      }
+
+      // Otherwise check if they are a member
+      try {
+        const isMember = await checkIsMember(walletAddress, projectOwner);
+        setHasPermission(isMember);
+      } catch (err) {
+        console.error("Failed to check member permission:", err);
+        setHasPermission(false);
+      }
+    }
+
+    checkPermission();
+  }, [connected, publicKey, projectOwner, checkIsMember]);
 
   // Fetch secrets from backend
   useEffect(() => {
@@ -231,6 +264,30 @@ export function SecretsTable({
         variant: "destructive",
       });
       return;
+    }
+
+    // Check if user has permission (either owner or member)
+    const walletAddress = publicKey.toBase58();
+    if (projectOwner && walletAddress !== projectOwner) {
+      try {
+        const isMember = await checkIsMember(walletAddress, projectOwner);
+        if (!isMember) {
+          toast({
+            title: "Permission Denied",
+            description: "You don't have permission to view these secrets. Please contact the project owner.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to check membership:", err);
+        toast({
+          title: "Permission Check Failed",
+          description: "Could not verify your access permissions. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     // If not yet decrypted, decrypt it with wallet
@@ -416,14 +473,24 @@ export function SecretsTable({
             {filteredSecrets.length === 1 ? "secret" : "secrets"}
           </span>
         </div>
-        {isInitialized && (
-          <Badge
-            variant="outline"
-            className="bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
-          >
-            <span className="flex items-center gap-1">Wallet Ready</span>
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {isInitialized && (
+            <Badge
+              variant="outline"
+              className="bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+            >
+              <span className="flex items-center gap-1">Wallet Ready</span>
+            </Badge>
+          )}
+          {hasPermission && (
+            <Badge
+              variant="outline"
+              className="bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
+            >
+              <span className="flex items-center gap-1">Access Granted</span>
+            </Badge>
+          )}
+        </div>
       </div>
       <Table>
         <TableHeader>

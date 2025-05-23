@@ -64,18 +64,26 @@ interface EnvConfig {
 }
 
 interface ProjectSecrets {
-  [key: string]: EnvConfig;
+  [environment: string]: EnvConfig;
+}
+
+interface Environment {
+  id: string;
+  name: string;
+  created_at: string;
+  project_id: string;
 }
 
 interface Project {
   id: string;
   name: string;
   description: string;
-  environments: string[];
+  environments: Environment[];
   members: number;
   updatedAt: string;
   status: "active" | "inactive";
   secrets: ProjectSecrets;
+  owner_wallet_address: string;
 }
 
 interface MockProjects {
@@ -110,7 +118,12 @@ export function ProjectDetail({ id }: { id: string }) {
       name: "Backend API",
       description:
         "Main backend API service with authentication and core services",
-      environments: ["development", "staging", "production"],
+      environments: [{
+        id: "default",
+        name: "development",
+        created_at: new Date().toISOString(),
+        project_id: "1"
+      }],
       members: 5,
       updatedAt: "2 hours ago",
       status: "active",
@@ -138,32 +151,63 @@ export function ProjectDetail({ id }: { id: string }) {
           ],
         },
       },
+      owner_wallet_address: "owner_wallet_address",
     },
   };
 
-  const project = mockProjects[id] || {
-    id,
-    name: "New Project",
-    description: "Project details not found",
-    environments: ["development"],
+  // Initialize project with default values
+  const [project, setProject] = useState<Project>({
+    id: id,
+    name: "Loading...",
+    description: "",
+    environments: [{
+      id: "default",
+      name: "development",
+      created_at: new Date().toISOString(),
+      project_id: id
+    }],
     members: 0,
-    updatedAt: "Unknown",
-    status: "inactive" as const,
+    updatedAt: new Date().toISOString(),
+    status: "active",
     secrets: {
       development: {
         configs: 0,
         secrets: [],
       },
     },
+    owner_wallet_address: "",
+  });
+
+  // Update project secrets helper function
+  const updateProjectSecrets = (environment: string, secrets: Secret[]) => {
+    setProject(prev => {
+      if (!prev) return prev;
+      
+      return {
+        ...prev,
+        secrets: {
+          ...prev.secrets,
+          [environment]: {
+            configs: secrets.length,
+            secrets: secrets,
+          },
+        },
+      };
+    });
   };
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentEnvironment, setCurrentEnvironment] = useState("");
+  const [currentEnvironment, setCurrentEnvironment] = useState("development");
   const [isAddEnvDialogOpen, setIsAddEnvDialogOpen] = useState(false);
   const [newEnvName, setNewEnvName] = useState("");
   const [isDeleteEnvDialogOpen, setIsDeleteEnvDialogOpen] = useState(false);
   const [envToDelete, setEnvToDelete] = useState("");
-  const [environments, setEnvironments] = useState<string[]>([]);
+  const [projectEnvironments, setProjectEnvironments] = useState<Environment[]>([{
+    id: "default",
+    name: "development",
+    created_at: new Date().toISOString(),
+    project_id: id
+  }]);
   const [showEditor, setShowEditor] = useState(false);
 
   // Add Secret Dialog State
@@ -191,11 +235,11 @@ export function ProjectDetail({ id }: { id: string }) {
   );
   const [environmentsLoaded, setEnvironmentsLoaded] = useState(false);
   useEffect(() => {
-    if (project.environments && project.environments.length > 0) {
-      setEnvironments(project.environments);
-      setCurrentEnvironment(project.environments[0]);
+    if (project?.environments && project.environments.length > 0) {
+      setProjectEnvironments(project.environments);
+      setCurrentEnvironment(project.environments[0].name);
     }
-  }, [project.id, JSON.stringify(project.environments)]);
+  }, [project?.id, JSON.stringify(project?.environments)]);
   // Fetch environment IDs on load
   useEffect(() => {
     async function fetchEnvironmentIds() {
@@ -677,20 +721,26 @@ export function ProjectDetail({ id }: { id: string }) {
   };
 
   const handleAddEnvironment = () => {
-    if (newEnvName.trim() && !environments.includes(newEnvName.toLowerCase())) {
-      setEnvironments([...environments, newEnvName.toLowerCase()]);
-      setCurrentEnvironment(newEnvName.toLowerCase());
+    if (newEnvName.trim() && !projectEnvironments.some(env => env.name === newEnvName.toLowerCase())) {
+      const newEnv: Environment = {
+        id: `temp-${Date.now()}`,
+        name: newEnvName.toLowerCase(),
+        created_at: new Date().toISOString(),
+        project_id: id
+      };
+      setProjectEnvironments([...projectEnvironments, newEnv]);
+      setCurrentEnvironment(newEnv.name);
       setNewEnvName("");
       setIsAddEnvDialogOpen(false);
     }
   };
 
   const handleDeleteEnvironment = () => {
-    if (envToDelete && environments.length > 1) {
-      const newEnvironments = environments.filter((env) => env !== envToDelete);
-      setEnvironments(newEnvironments);
+    if (envToDelete && projectEnvironments.length > 1) {
+      const newEnvironments = projectEnvironments.filter((env) => env.name !== envToDelete);
+      setProjectEnvironments(newEnvironments);
       if (currentEnvironment === envToDelete) {
-        setCurrentEnvironment(newEnvironments[0]);
+        setCurrentEnvironment(newEnvironments[0].name);
       }
       setIsDeleteEnvDialogOpen(false);
     }
@@ -702,9 +752,9 @@ export function ProjectDetail({ id }: { id: string }) {
   };
 
   // Function to get environment button styling
-  const getEnvironmentButtonClass = (env: string) => {
-    if (currentEnvironment === env) {
-      switch (env) {
+  const getEnvironmentButtonClass = (envName: string) => {
+    if (currentEnvironment === envName) {
+      switch (envName) {
         case "development":
           return "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border-blue-300";
         case "staging":
@@ -719,8 +769,8 @@ export function ProjectDetail({ id }: { id: string }) {
   };
 
   // Function to get environment badge styling
-  const getEnvironmentBadgeClass = (env: string) => {
-    switch (env) {
+  const getEnvironmentBadgeClass = (envName: string) => {
+    switch (envName) {
       case "dev":
         return "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400";
       case "dev_personal":
@@ -752,21 +802,21 @@ export function ProjectDetail({ id }: { id: string }) {
     <div className="space-y-6">
       <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex flex-wrap gap-1">
-          {environments.map((env) => (
-            <div key={env} className="relative group">
+          {projectEnvironments.map((env, index) => (
+            <div key={`${env.id}-${index}`} className="relative group">
               <Button
                 variant="outline"
-                className={`capitalize ${getEnvironmentButtonClass(env)}`}
-                onClick={() => setCurrentEnvironment(env)}
+                className={`capitalize ${getEnvironmentButtonClass(env.name)}`}
+                onClick={() => setCurrentEnvironment(env.name)}
               >
-                {env}
+                {env.name}
               </Button>
-              {environments.length > 1 && env !== "production" && (
+              {projectEnvironments.length > 1 && env.name !== "production" && (
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-5 w-5 absolute -top-2 -right-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => openDeleteDialog(env)}
+                  onClick={() => openDeleteDialog(env.name)}
                 >
                   <X className="h-3 w-3" />
                   <span className="sr-only">Delete environment</span>
@@ -819,7 +869,7 @@ export function ProjectDetail({ id }: { id: string }) {
                   onClick={handleAddEnvironment}
                   disabled={
                     !newEnvName.trim() ||
-                    environments.includes(newEnvName.toLowerCase())
+                    projectEnvironments.some(env => env.name === newEnvName.toLowerCase())
                   }
                 >
                   Add Environment
@@ -1148,6 +1198,7 @@ export function ProjectDetail({ id }: { id: string }) {
                 projectId={id}
                 environment={currentEnvironment}
                 searchQuery={searchQuery}
+                projectOwner={mockProjects[id]?.owner_wallet_address || ""}
               />
             </div>
           </div>

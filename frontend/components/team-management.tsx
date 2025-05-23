@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -35,71 +35,121 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePermissionProgram } from "@/hooks/usePermissionProgram";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  walletAddress?: string;
+  role: "owner" | "admin" | "member";
+  avatar: string;
+  initials: string;
+  status: "active" | "pending";
+  joinedAt: string;
+}
+
+// Sample names for random assignment
+const RANDOM_NAMES = [
+  "Alex Thompson",
+  "Morgan Lee",
+  "Jordan Taylor",
+  "Casey Parker",
+  "Riley Morgan",
+  "Sam Wilson",
+  "Jamie Smith",
+  "Taylor Brown",
+  "Quinn Johnson",
+  "Avery Davis",
+];
+
+// Predefined team members data (excluding owner)
+const PREDEFINED_MEMBERS: TeamMember[] = [
+  {
+    id: "2",
+    name: "Sarah Kim",
+    email: "sarah@gmail.com",
+    role: "admin",
+    avatar: "/images/no2_avatar.jpg",
+    initials: "SK",
+    status: "active",
+    joinedAt: "June 2023",
+  },
+  {
+    id: "3",
+    name: "Mike Johnson",
+    email: "mike@gmail.com",
+    role: "member",
+    avatar: "/images/no3_avatar.jpg",
+    initials: "MJ",
+    status: "active",
+    joinedAt: "July 2023",
+  },
+  {
+    id: "4",
+    name: "Lisa Chen",
+    email: "lisa@gmail.com",
+    role: "member",
+    avatar: "/images/no4_avatar.jpg",
+    initials: "LC",
+    status: "active",
+    joinedAt: "August 2023",
+  },
+  {
+    id: "5",
+    name: "David Wilson",
+    email: "david@gmail.com",
+    role: "member",
+    avatar: "/images/no5_avatar.jpg",
+    initials: "DW",
+    status: "active",
+    joinedAt: "September 2023",
+  },
+];
 
 export function TeamManagement() {
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [newRole, setNewRole] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [nextPredefinedMemberIndex, setNextPredefinedMemberIndex] = useState(() => {
+    const stored = localStorage.getItem('nextPredefinedMemberIndex');
+    return stored ? parseInt(stored) : 0;
+  });
 
-  // Sample team members data
-  const teamMembers = [
-    {
+  const { removeMember, initialized, loading: programLoading } = usePermissionProgram();
+
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(() => {
+    const stored = localStorage.getItem('teamMembers');
+    return stored ? JSON.parse(stored) : [{
       id: "1",
       name: "John Doe",
-      email: "john@example.com",
+      email: "john@gmail.com",
+      walletAddress: "", // Project owner's wallet will be here
       role: "owner",
       avatar: "/images/no1_avatar.jpg",
       initials: "JD",
       status: "active",
       joinedAt: "May 2023",
-    },
-    {
-      id: "2",
-      name: "Sarah Kim",
-      email: "sarah@example.com",
-      role: "admin",
-      avatar: "/images/no2_avatar.jpg",
-      initials: "SK",
-      status: "active",
-      joinedAt: "June 2023",
-    },
-    {
-      id: "3",
-      name: "Mike Johnson",
-      email: "mike@example.com",
-      role: "member",
-      avatar: "/images/no3_avatar.jpg",
-      initials: "MJ",
-      status: "active",
-      joinedAt: "July 2023",
-    },
-    {
-      id: "4",
-      name: "Lisa Chen",
-      email: "lisa@example.com",
-      role: "member",
-      avatar: "/images/no4_avatar.jpg",
-      initials: "LC",
-      status: "active",
-      joinedAt: "August 2023",
-    },
-    {
-      id: "5",
-      name: "David Wilson",
-      email: "david@example.com",
-      role: "member",
-      avatar: "/images/no5_avatar.jpg",
-      initials: "DW",
-      status: "pending",
-      joinedAt: "September 2023",
-    },
-  ];
+    }];
+  });
+
+  // Save to localStorage whenever teamMembers changes
+  useEffect(() => {
+    localStorage.setItem('teamMembers', JSON.stringify(teamMembers));
+  }, [teamMembers]);
+
+  // Save nextPredefinedMemberIndex to localStorage
+  useEffect(() => {
+    localStorage.setItem('nextPredefinedMemberIndex', nextPredefinedMemberIndex.toString());
+  }, [nextPredefinedMemberIndex]);
 
   const handleChangeRole = (memberId: string) => {
     setSelectedMember(memberId);
     setIsRoleDialogOpen(true);
-    // Find current role and set it as default
     const member = teamMembers.find((m) => m.id === memberId);
     if (member) {
       setNewRole(member.role);
@@ -112,21 +162,81 @@ export function TeamManagement() {
   };
 
   const confirmChangeRole = () => {
-    // Logic to change role would go here
-    console.log(`Changed role for member ${selectedMember} to ${newRole}`);
     setIsRoleDialogOpen(false);
   };
 
-  const confirmRemoveMember = () => {
-    // Logic to remove member would go here
-    console.log(`Removed member ${selectedMember}`);
-    setIsRemoveDialogOpen(false);
+  const confirmRemoveMember = async () => {
+    const member = teamMembers.find((m) => m.id === selectedMember);
+    if (!member || !member.walletAddress) {
+      setError("Member not found or invalid wallet address");
+      return;
+    }
+
+    try {
+      const tx = await removeMember(member.walletAddress);
+      if (tx) {
+        setTeamMembers(prev => prev.filter(m => m.id !== selectedMember));
+        setSuccess(`Successfully removed ${member.name}`);
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        throw new Error("Failed to remove member");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to remove member");
+    } finally {
+      setIsRemoveDialogOpen(false);
+    }
   };
 
-  const resendInvitation = (memberId: string) => {
-    // Logic to resend invitation would go here
-    console.log(`Resent invitation to member ${memberId}`);
+  // Function to add a new member to the display list
+  const addNewMember = (walletAddress: string) => {
+    let newMember: TeamMember;
+
+    if (nextPredefinedMemberIndex < PREDEFINED_MEMBERS.length) {
+      // Use predefined member data
+      const predefinedMember = PREDEFINED_MEMBERS[nextPredefinedMemberIndex];
+      newMember = {
+        ...predefinedMember,
+        id: Date.now().toString(),
+        walletAddress,
+        role: "member" as const, // Explicitly type as "member"
+      };
+      setNextPredefinedMemberIndex(prev => prev + 1);
+    } else {
+      // Fall back to random name if we've used all predefined members
+      const randomName = RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
+      const initials = randomName.split(' ').map(n => n[0]).join('');
+      
+      // Use the last predefined member's avatar cyclically
+      const avatarIndex = (nextPredefinedMemberIndex % PREDEFINED_MEMBERS.length) + 2;
+      
+      newMember = {
+        id: Date.now().toString(),
+        name: randomName,
+        email: `${randomName.toLowerCase().replace(' ', '.')}@gmail.com`,
+        walletAddress,
+        role: "member" as const, // Explicitly type as "member"
+        avatar: `/images/no${avatarIndex}_avatar.jpg`,
+        initials,
+        status: "active" as const, // Explicitly type as "active"
+        joinedAt: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      };
+    }
+
+    setTeamMembers(prev => [...prev, newMember]);
   };
+
+  // Listen for custom event when new member is added
+  useEffect(() => {
+    const handleNewMember = (event: CustomEvent<{ walletAddress: string }>) => {
+      addNewMember(event.detail.walletAddress);
+    };
+
+    window.addEventListener('memberAdded' as any, handleNewMember as any);
+    return () => {
+      window.removeEventListener('memberAdded' as any, handleNewMember as any);
+    };
+  }, []);
 
   return (
     <Card>
@@ -137,6 +247,20 @@ export function TeamManagement() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        {success && (
+          <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
+        )}
+
         <div className="rounded-md border">
           <div className="grid grid-cols-12 gap-4 p-4 font-medium text-muted-foreground">
             <div className="col-span-4">Member</div>
@@ -163,6 +287,11 @@ export function TeamManagement() {
                     <div className="text-sm text-muted-foreground">
                       {member.email}
                     </div>
+                    {member.walletAddress && (
+                      <div className="text-xs text-muted-foreground font-mono truncate max-w-[200px]">
+                        {member.walletAddress}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -199,7 +328,6 @@ export function TeamManagement() {
                     variant="ghost"
                     size="sm"
                     className="h-8"
-                    onClick={() => resendInvitation(member.id)}
                   >
                     <Mail className="mr-2 h-4 w-4" />
                     Resend
@@ -215,22 +343,15 @@ export function TeamManagement() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       {member.role !== "owner" && (
-                        <DropdownMenuItem
-                          onClick={() => handleChangeRole(member.id)}
-                        >
-                          <Shield className="mr-2 h-4 w-4" />
-                          Change role
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      {member.role !== "owner" && (
-                        <DropdownMenuItem
-                          className="text-destructive focus:bg-destructive/10"
-                          onClick={() => handleRemoveMember(member.id)}
-                        >
-                          <UserX className="mr-2 h-4 w-4" />
-                          Remove member
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem
+                            className="text-destructive focus:bg-destructive/10"
+                            onClick={() => handleRemoveMember(member.id)}
+                          >
+                            <UserX className="mr-2 h-4 w-4" />
+                            Remove member
+                          </DropdownMenuItem>
+                        </>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -298,19 +419,23 @@ export function TeamManagement() {
             <DialogHeader>
               <DialogTitle>Remove Team Member</DialogTitle>
               <DialogDescription>
-                Are you sure you want to remove this member from your team? They
-                will lose access to all projects.
+                Are you sure you want to remove this member from your team? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() => setIsRemoveDialogOpen(false)}
+                disabled={programLoading}
               >
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={confirmRemoveMember}>
-                Remove Member
+              <Button 
+                variant="destructive" 
+                onClick={confirmRemoveMember}
+                disabled={programLoading}
+              >
+                {programLoading ? "Removing..." : "Remove Member"}
               </Button>
             </DialogFooter>
           </DialogContent>
