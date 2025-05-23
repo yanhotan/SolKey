@@ -1,0 +1,156 @@
+{
+  "version": "0.1.0",
+  "name": "permission_program",
+  "address": "A3Y68w5bTR4y8GkT9hPKXQ8AXYNTivFCiA3D9QkAkC9j",
+  "metadata": {
+    "name": "permission_program",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Solana permission program for SolKey"
+  },
+  "instructions": [
+    {
+      "name": "initializeProject",
+      "discriminator": [175, 175, 109, 31, 13, 152, 155, 237],
+      "accounts": [
+        {
+          "name": "project",
+          "isMut": true,
+          "isSigner": false,
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false,
+          "writable": false,
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "addMember",
+      "discriminator": [90, 95, 107, 42, 205, 124, 50, 225],
+      "accounts": [
+        {
+          "name": "project",
+          "isMut": true,
+          "isSigner": false,
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "memberToAdd",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "removeMember",
+      "discriminator": [194, 226, 248, 12, 128, 241, 94, 127],
+      "accounts": [
+        {
+          "name": "project",
+          "isMut": true,
+          "isSigner": false,
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "isMut": true,
+          "isSigner": true,
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "memberToRemove",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "checkIsMember",
+      "discriminator": [122, 96, 44, 225, 219, 81, 101, 254],
+      "accounts": [
+        {
+          "name": "project",
+          "isMut": false,
+          "isSigner": false,
+          "writable": false
+        }
+      ],
+      "args": [
+        {
+          "name": "memberToCheck",
+          "type": "publicKey"
+        },
+        {
+          "name": "projectOwnerOnChain",
+          "type": "publicKey"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Project",
+      "discriminator": [57, 116, 11, 134, 62, 203, 150, 42],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "members",
+            "type": {
+              "vec": "publicKey"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "The user is not authorized to perform this action."
+    },
+    {
+      "code": 6001,
+      "name": "MemberAlreadyExists",
+      "msg": "The member is already part of the project."
+    },
+    {
+      "code": 6002,
+      "name": "MemberNotFound",
+      "msg": "The member was not found in the project."
+    },
+    {
+      "code": 6003,
+      "name": "MaxMembersReached",
+      "msg": "Maximum number of members reached."
+    }
+  ]
+}

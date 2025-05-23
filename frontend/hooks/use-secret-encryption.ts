@@ -174,7 +174,7 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
         wallet_address_length: secretData.wallet_address.length,
         has_encryption_keys: !!secretData.encrypted_aes_key && !!secretData.nonce && !!secretData.ephemeral_public_key
       });      // Send to backend for storage
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
       console.log(`Sending POST request to ${apiUrl}/api/secrets`);
       
       const response = await fetch(`${apiUrl}/api/secrets`, {
@@ -252,7 +252,7 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
         throw new Error('User declined to sign the authentication message');
       }
         // Fetch encrypted data from backend with signature authentication
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
       const response = await fetch(`${apiUrl}/api/secrets/${secretId}/decrypt`, {
         method: 'POST',
         headers: {
@@ -315,7 +315,7 @@ export function useSecretEncryption(): UseSecretEncryptionReturn {
     setError(null);
 
     try {      // Fetch secrets metadata for this wallet
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
       // Make sure we use the correct parameter name as expected by the backend (walletAddress)
       const response = await fetch(`${apiUrl}/api/secrets/metadata?walletAddress=${publicKey.toBase58()}`, {
         method: 'GET',

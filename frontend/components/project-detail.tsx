@@ -203,7 +203,7 @@ export function ProjectDetail({ id }: { id: string }) {
 
       try {
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+          process.env.NEXT_PUBLIC_API_URL || '/api';
         const response = await fetch(
           `${apiUrl}/api/environments?project_id=${id}`
         );
@@ -267,7 +267,7 @@ export function ProjectDetail({ id }: { id: string }) {
         // Only include wallet address if connected
         const walletAddress = publicKey ? publicKey.toBase58() : null;
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+          process.env.NEXT_PUBLIC_API_URL || '/api';
         // Get environment ID from the map
         let environmentId = environmentMap[currentEnvironment];
 
@@ -473,7 +473,7 @@ export function ProjectDetail({ id }: { id: string }) {
           `Environment ID not found for "${currentEnvironment}". Attempting to refresh environment data...`
         );
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+          process.env.NEXT_PUBLIC_API_URL || '/api';
 
         try {
           // Attempt an immediate reload of environment data
@@ -548,7 +548,7 @@ export function ProjectDetail({ id }: { id: string }) {
         secretData.iv = ivHex.substring(0, 24);
       }
       // Send to backend for storage
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
 
       console.log(" Sending to API:", {
         url: `${apiUrl}/api/secrets`,

@@ -1,2 +1,4 @@
 .env*
 node_modules
+.anchor/
+programs/permission_program/target/

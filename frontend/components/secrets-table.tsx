@@ -100,7 +100,7 @@ export function SecretsTable({
           );
           try {
             const apiUrl =
-              process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+              process.env.NEXT_PUBLIC_API_URL || '/api';
             const envResponse = await fetch(
               `${apiUrl}/api/environments?project_id=${projectId}`
             );
@@ -136,7 +136,7 @@ export function SecretsTable({
 
         // Use API URL from environment or fallback to default
         const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+          process.env.NEXT_PUBLIC_API_URL || '/api';
 
         // Use the new by-project endpoint if no wallet is connected
         let url;
@@ -282,7 +282,7 @@ export function SecretsTable({
           );
 
           const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+            process.env.NEXT_PUBLIC_API_URL || '/api';
           const response = await fetch(
             `${apiUrl}/api/secrets/${
               secret.id

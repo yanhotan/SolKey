@@ -1,13 +1,15 @@
 # SolSecure: Wallet-Based End-to-End Encrypted Secret Management
 
-SolSecure is a secure end-to-end encrypted secret management system built with Solana wallet authentication. It uses client-side encryption and Solana wallet signatures to ensure that sensitive information remains protected at all times.
+SolSecure is a secure end-to-end encrypted secret management system built with Solana wallet authentication. It uses client-side encryption, Solana wallet signatures, and on-chain permission verification to ensure that sensitive information remains protected and properly shared.
 
 ## Architecture Overview
 
 SolSecure uses a modern, secure architecture:
+![E2EE Flow](./images/Architecture_FlowChart.png)
 
 - **Frontend**: Next.js application with Solana wallet integration
 - **Backend**: Express.js server with Supabase database
+- **Smart Contract**: Solana program for permission management
 - **Security**: End-to-end encryption using WebCrypto API
 - **Authentication**: Solana wallet signatures
 
@@ -15,7 +17,8 @@ SolSecure uses a modern, secure architecture:
 
 1. **End-to-End Encryption**: All secrets are encrypted in the browser before being sent to the server
 2. **Wallet-Based Authentication**: User identity is verified through Solana wallet signatures
-3. **Zero Knowledge Design**: The backend never sees plaintext secrets
+3. **On-Chain Permissions**: Access control managed through Solana smart contract
+4. **Zero Knowledge Design**: The backend never sees plaintext secrets
 
 ## Prerequisites
 
@@ -48,6 +51,14 @@ solsecure/
 │   │   ├── secrets.js    # Secret management endpoints
 │   │   └── projects.js   # Project management endpoints
 │   └── index.js      # Server entry point
+│
+├── programs/         # Solana programs
+│   └── permission_program/  # Permission management contract
+│       ├── src/            # Program source code
+│       │   ├── lib.rs      # Program entry point
+│       │   ├── state.rs    # Program state definitions
+│       │   └── error.rs    # Custom error types
+│       └── Cargo.toml      # Rust dependencies
 ```
 
 ## Quick Start (Development)
@@ -108,7 +119,16 @@ SolSecure uses Solana wallets for authentication, eliminating the need for passw
 - Sign messages to verify your identity
 - Your wallet address serves as your unique identifier
 
-### 2. End-to-End Encryption
+### 2. On-Chain Permission Management
+
+Access control is managed through a Solana smart contract:
+
+- Project owners can add/remove members on-chain
+- Permission verification is decentralized and transparent
+- Members can only decrypt secrets they have permission to access
+- Automatic permission revocation when removed from project
+
+### 3. End-to-End Encryption
 
 All sensitive data is encrypted in your browser before transmission:
 
@@ -116,11 +136,34 @@ All sensitive data is encrypted in your browser before transmission:
 - Encryption keys derived from wallet signatures
 - Backend only stores encrypted data
 
-### 3. Secret Management
+### 4. Secret Management
 
 - Create and manage encrypted secrets
 - Organize secrets by projects and environments
-- Share secrets with other wallet addresses securely
+- Share secrets securely with verified project members
+- Permission-based access control through smart contract
+
+## Permission Program Flow
+
+### 1. Project Initialization
+
+1. Owner creates a new project on-chain
+2. Program creates a PDA (Program Derived Address) for the project
+3. Owner becomes the default administrator
+
+### 2. Member Management
+
+1. Owner adds members to project through smart contract
+2. Each member's public key is stored in project state
+3. Members can verify their access rights on-chain
+4. Owner can remove members, instantly revoking access
+
+### 3. Secret Sharing
+
+1. When sharing a secret, the system verifies membership on-chain
+2. Only verified members can receive encryption keys
+3. Access is automatically revoked when removed from project
+4. All permission checks are verified through the smart contract
 
 ## Encryption Flow
 
@@ -192,6 +235,8 @@ SolSecure uses Supabase with the following tables:
 - The application uses industry-standard AES-256-GCM encryption
 - Private keys never leave your wallet
 - Wallet signatures are only used for authentication and key derivation
+- Permission management is handled by secure on-chain program
+- Member access is verified through Solana smart contract
 - Consider using hardware wallets for additional security
 
 ## Development Guidelines

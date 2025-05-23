@@ -9,6 +9,7 @@
     "dev": "concurrently \"pnpm dev:frontend\" \"pnpm dev:backend\""
   },
   "dependencies": {
+    "anchor": "^1.4.1",
     "bs58": "^6.0.0",
     "next": "^15.3.2",
     "react": "^19.1.0",

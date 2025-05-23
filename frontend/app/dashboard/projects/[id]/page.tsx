@@ -50,7 +50,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         const { id } = await params
 
         try {
-          const res = await fetch(`http://localhost:3002/api/projects/${id}`);
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects/${id}`);
           const project = await res.json();
           setProjects(project);
         } catch (error) {

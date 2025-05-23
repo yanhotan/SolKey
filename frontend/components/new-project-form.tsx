@@ -97,7 +97,7 @@ export function NewProjectForm() {
       }
 
       
-    const response = await fetch("http://localhost:3002/api/projects", {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

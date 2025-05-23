@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardFooter } from "@/components/ui/
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar } from "@/components/ui/avatar"
-import { Bot, Send, User, RefreshCw } from "lucide-react"
+import { Send, User, RefreshCw } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import Image from "next/image"
 
 // Sample FAQ data for answering questions
 const faqs = [
@@ -143,8 +144,14 @@ export function AIAssistant() {
   return (
     <Card className="h-[calc(100vh-12rem)]">
       <div className="p-4 flex items-center gap-2 border-b">
-        <Avatar className="h-8 w-8 bg-primary/10">
-          <Bot className="h-4 w-4 text-primary" />
+        <Avatar className="h-8 w-8 bg-primary/10 flex items-center justify-center">
+          <Image 
+            src="/images/solsecure_logo.png" 
+            alt="SolSecure AI" 
+            width={20} 
+            height={20}
+            className="text-primary object-contain"
+          />
         </Avatar>
         <div>
           <h2 className="text-lg font-semibold">SolSecure Assistant</h2>
@@ -164,9 +171,15 @@ export function AIAssistant() {
                 className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div className={`flex gap-3 max-w-[80%] ${message.sender === "user" ? "flex-row-reverse" : ""}`}>
-                  <Avatar className={`h-8 w-8 ${message.sender === "assistant" ? "bg-primary/10" : "bg-secondary"}`}>
+                  <Avatar className={`h-8 w-8 ${message.sender === "assistant" ? "bg-primary/10" : "bg-secondary"} flex items-center justify-center`}>
                     {message.sender === "assistant" ? (
-                      <Bot className="h-4 w-4 text-primary" />
+                      <Image 
+                        src="/images/solsecure_logo.png" 
+                        alt="SolSecure AI" 
+                        width={20} 
+                        height={20}
+                        className="text-primary object-contain"
+                      />
                     ) : (
                       <User className="h-4 w-4" />
                     )}
@@ -187,8 +200,14 @@ export function AIAssistant() {
             {isTyping && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-start">
                 <div className="flex gap-3 max-w-[80%]">
-                  <Avatar className="h-8 w-8 bg-primary/10">
-                    <Bot className="h-4 w-4 text-primary" />
+                  <Avatar className="h-8 w-8 bg-primary/10 flex items-center justify-center">
+                    <Image 
+                      src="/images/solsecure_logo.png" 
+                      alt="SolSecure AI" 
+                      width={20} 
+                      height={20}
+                      className="text-primary object-contain"
+                    />
                   </Avatar>
                   <div className="rounded-lg p-3 bg-muted flex items-center">
                     <div className="flex space-x-1">

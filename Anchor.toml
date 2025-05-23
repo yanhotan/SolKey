@@ -1,0 +1,14 @@
+[workspace]
+members = [
+  "programs/permission_program"
+]
+
+[provider]
+cluster = "localnet"
+wallet = "C:/Users/tanya/.config/solana/id.json"
+
+[programs.localnet]
+permission_program = "5vgcyZfQpbG1Fwthj4fkVfvwe371gTzUtjUN6p5nzUZ3"
+
+[toolchain]
+anchor_version = "0.29.0"

@@ -51,7 +51,7 @@ export function ProjectsList() {
   useEffect(() => {
     async function fetchProjects() {
       try {
-        const res = await fetch("http://localhost:3002/api/projects");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects`);
         const data = await res.json();
         setProjects(Array.isArray(data) ? data : data.projects || []);
       } catch (error) {
