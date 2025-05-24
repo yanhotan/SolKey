@@ -238,17 +238,62 @@ router.delete("/:id", async (req, res) => {
 router.post("/:projectId/members", async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { userId, role } = req.body;
+    const { walletAddress, role } = req.body;
 
-    if (!userId) {
+    if (!walletAddress || !role) {
       return res.status(400).json({
-        error: "userId is required",
+        error: "walletAddress and role are required",
       });
     }
 
-    const member = await addProjectMember(projectId, userId, role);
+    // Get the user ID for the wallet address (invited user)
+    const { data: invitedUser, error: invitedUserError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("wallet_address", walletAddress)
+      .single();
+
+    if (invitedUserError) {
+      console.error("Error finding invited user:", invitedUserError);
+      return res.status(404).json({ error: "Invited user not found" });
+    }
+
+    // Check if user is already a member
+    const { data: existingMember, error: memberError } = await supabase
+      .from("project_members")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("user_id", invitedUser.id)
+      .single();
+
+    if (existingMember) {
+      return res.status(400).json({
+        error: "User is already a member of this project",
+      });
+    }
+
+    // Add the new member
+    const { data: member, error: insertError } = await supabase
+      .from("project_members")
+      .insert([
+        {
+          project_id: projectId,
+          user_id: invitedUser.id,
+          wallet_address: walletAddress,
+          role: role
+        },
+      ])
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Error adding member:", insertError);
+      throw insertError;
+    }
+
     res.status(201).json(member);
   } catch (error) {
+    console.error("Error adding project member:", error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -26,7 +26,7 @@ export function NewProjectForm() {
     production: true,
   })
   const router = useRouter()
-  const { connected } = useWallet()
+  const { connected, publicKey } = useWallet()
   // const { isInitialized, handleSignMessage } = useWalletEncryption()
 
   // useEffect(() => {
@@ -106,7 +106,8 @@ export function NewProjectForm() {
         name: projectName.trim(),
         description: projectDescription.trim(),
         environments: selectedEnvironments,
-        creatorId:"2d48f326-c9fd-47d8-85f6-0b21e5af3992",
+        creatorId: "6b10bd1f-3d48-4d84-9585-18ec0ec5d93e",
+        creatorWalletAddress: publicKey?.toBase58() || "",
       }),
     });
 

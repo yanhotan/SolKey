@@ -92,18 +92,27 @@ export function SecretsTable({
         return;
       }
 
-      // Otherwise check if they are a member
+      // Check if user is a member in the database
       try {
-        const isMember = await checkIsMember(walletAddress, projectOwner);
-        setHasPermission(isMember);
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
+        const response = await fetch(
+          `${apiUrl}/api/projects/${projectId}/members?walletAddress=${walletAddress}`
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to check membership');
+        }
+
+        const data = await response.json();
+        setHasPermission(data.isMember);
       } catch (err) {
-        console.error("Failed to check member permission:", err);
+        console.error("Failed to check membership:", err);
         setHasPermission(false);
       }
     }
 
     checkPermission();
-  }, [connected, publicKey, projectOwner, checkIsMember]);
+  }, [connected, publicKey, projectOwner, projectId]);
 
   // Fetch secrets from backend
   useEffect(() => {
@@ -114,79 +123,13 @@ export function SecretsTable({
       try {
         // Include wallet address if available for proper authorization
         const walletAddress = publicKey ? publicKey.toBase58() : null;
-        console.log(
-          `Fetching secrets for project: ${projectId}, environment: ${environment}${
-            walletAddress ? `, wallet: ${walletAddress}` : ""
-          }`
-        );
-
-        // Fetch environment ID if needed
-        let environmentId = environment;
-        if (
-          !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-            environment
-          )
-        ) {
-          // If it's not a UUID format, we need to fetch the environment ID first
-          console.log(
-            `Environment parameter "${environment}" is not in UUID format, fetching environment ID...`
-          );
-          try {
-            const apiUrl =
-              process.env.NEXT_PUBLIC_API_URL || '/api';
-            const envResponse = await fetch(
-              `${apiUrl}/api/environments?project_id=${projectId}`
-            );
-            if (!envResponse.ok) {
-              throw new Error(
-                `Failed to fetch environments: ${envResponse.status}`
-              );
-            }
-            const data = await envResponse.json();
-            // Get all environment IDs for this project
-            const envIds = data.environments?.map((e: any) => e.id) || [];
-            if (envIds.length > 0) {
-              environmentId = envIds;
-              console.log(
-                `Found environment IDs ${envIds.join(
-                  ", "
-                )} for project ${projectId}`
-              );
-            } else {
-              throw new Error(
-                `Could not find any environments for project ${projectId}`
-              );
-            }
-          } catch (err) {
-            console.error("Error fetching environment IDs:", err);
-            throw new Error(
-              `Failed to get environment IDs: ${
-                err instanceof Error ? err.message : "Unknown error"
-              }`
-            );
-          }
-        }
-
+        
         // Use API URL from environment or fallback to default
-        const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || '/api';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api';
 
-        // Use the new by-project endpoint if no wallet is connected
-        let url;
-        if (!walletAddress) {
-          // Convert environmentId to array if it's not already
-          const envIds = Array.isArray(environmentId)
-            ? environmentId
-            : [environmentId];
-          url = `${apiUrl}/api/secrets/by-project?project_id=${projectId}&environment_id=${envIds.join(
-            ","
-          )}`;
-          console.log("Using by-project endpoint:", url);
-        } else {
-          url = `${apiUrl}/api/secrets?project_id=${projectId}&environment_id=${environmentId}&walletAddress=${walletAddress}`;
-          console.log("Using wallet-based endpoint:", url);
-        }
-
+        // Always use the wallet-based endpoint to ensure proper access control
+        const url = `${apiUrl}/api/secrets?project_id=${projectId}&environment_id=${environment}&walletAddress=${walletAddress}`;
+        
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -194,8 +137,7 @@ export function SecretsTable({
           let errorMessage;
           try {
             const errorData = JSON.parse(errorText);
-            errorMessage =
-              errorData.error || `Failed to fetch secrets: ${response.status}`;
+            errorMessage = errorData.error || `Failed to fetch secrets: ${response.status}`;
           } catch {
             errorMessage = `Failed to fetch secrets: ${response.status} - ${errorText}`;
           }
@@ -206,34 +148,23 @@ export function SecretsTable({
         console.log(`Fetched ${data.secrets?.length || 0} secrets from API`);
 
         // Map backend response to our Secret type
-        const formattedSecrets: Secret[] =
-          data.secrets?.map((secret: any) => {
-            // For debugging what we're receiving from the server
-            console.log("Secret from server:", secret);
+        const formattedSecrets: Secret[] = data.secrets?.map((secret: any) => ({
+          id: secret.id,
+          name: secret.name,
+          value: secret.encrypted_value || "",
+          type: secret.type?.toLowerCase() || "string",
+          iv: secret.iv || "",
+          createdAt: secret.created_at || new Date().toISOString(),
+          updatedAt: secret.updated_at || new Date().toISOString(),
+          createdBy: secret.created_by || "system",
+          updatedBy: secret.updated_by || "system",
+        })) || [];
 
-            return {
-              id: secret.id,
-              name: secret.name,
-              value: secret.encrypted_value || "", // Use encrypted_value directly
-              type: secret.type?.toLowerCase() || "string",
-              iv: secret.iv || "",
-              createdAt: secret.created_at || new Date().toISOString(),
-              updatedAt: secret.updated_at || new Date().toISOString(),
-              createdBy: secret.created_by || "system",
-              updatedBy: secret.updated_by || "system",
-            };
-          }) || [];
-
-        console.log(
-          `Loaded ${formattedSecrets.length} secrets for project: ${projectId}, environment: ${environment}`
-        );
         setSecrets(formattedSecrets);
-        setError(null); // Clear any previous errors on successful fetch
+        setError(null);
       } catch (err) {
         console.error("Error fetching secrets:", err);
         setError(err instanceof Error ? err.message : "Failed to load secrets");
-
-        // Fallback to empty array
         setSecrets([]);
       } finally {
         setLoading(false);
@@ -241,7 +172,7 @@ export function SecretsTable({
     }
 
     fetchSecrets();
-  }, [projectId, environment, publicKey]); // Re-run when publicKey changes (wallet connected/disconnected)
+  }, [projectId, environment, publicKey]);
 
   // Filter secrets based on search query
   const filteredSecrets = secrets.filter((secret) =>
