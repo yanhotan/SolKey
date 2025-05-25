@@ -1,6 +1,13 @@
-# SolSecure: Wallet-Based End-to-End Encrypted Secret Management
 
-SolSecure is a secure end-to-end encrypted secret management system built with Solana wallet authentication. It uses client-side encryption, Solana wallet signatures, and on-chain permission verification to ensure that sensitive information remains protected and properly shared.
+# SolSecure: Solana Wallet-Powered Zero-Trust Secret Management with AI Agent
+
+👉 **Check it out:** [https://solsecure.vercel.app/](url)
+
+SolSecure revolutionizes secret management through zero key management - no private keys to store, no passwords to remember, no complex key rotations. Powered by Solana blockchain technology, users simply connect their wallet and sign messages to securely access encrypted secrets.
+
+**Zero-Trust Security Model**: Implements passwordless authentication where your Solana wallet IS your identity with no additional credentials. Zero key management means no private keys stored anywhere - encryption keys derived from wallet signatures on-demand. Smart contract permissions provide on-chain membership verification ensuring only authorized users access secrets. End-to-end encryption protects secrets in browser before transmission - backend never sees plaintext data.
+
+**AI-Powered Assistant**: Integrated AI Assistant provides smart project creation with guided optimal structure and environment setup, intelligent log analysis extracting insights from activity logs and access patterns, automated environment management with AI-suggested best practices for dev/staging/production workflows, and proactive security recommendations based on usage patterns and industry standards.
 
 ## Architecture Overview
 
@@ -187,81 +194,6 @@ All sensitive data is encrypted in your browser before transmission:
 3. Frontend decrypts the data using the wallet-derived key
 4. Decrypted data never leaves the user's browser
 
-## API Routes
-
-### Backend API
-
-- `POST /secrets`: Create a new encrypted secret
-- `GET /secrets/:id`: Get an encrypted secret
-- `POST /secrets/:id/share`: Share a secret with another wallet
-- `POST /secrets/:id/decrypt`: Client-side decryption endpoint
-
-## Database Schema
-
-SolSecure uses Supabase with the following tables:
-
-- `projects`: Store project information
-- `environments`: Different environments within projects (dev, staging, prod)
-- `secrets`: Encrypted secret values with their metadata
-- `secret_keys`: Wallet-specific encryption keys for shared secrets
-- `users`: User profile information linked to wallet addresses
-- `project_members`: Project access control
-
-## Troubleshooting
-
-### Common Issues
-
-#### "Encryption key not available"
-
-- Ensure your wallet is connected
-- Click "Sign & Decrypt" to sign a message and generate the encryption key
-- Check browser console for detailed error messages
-
-#### Decryption Failures
-
-- Clear browser localStorage and reconnect your wallet
-- Ensure you're using the same wallet that encrypted the data
-- Check browser console for detailed error information
-- Run the diagnostic tool from the dashboard to verify WebCrypto compatibility
-
-#### Wallet Connection Issues
-
-- Ensure your wallet extension is installed and unlocked
-- Try refreshing the page
-- Check for wallet adapter compatibility
-
-## Security Considerations
-
-- The application uses industry-standard AES-256-GCM encryption
-- Private keys never leave your wallet
-- Wallet signatures are only used for authentication and key derivation
-- Permission management is handled by secure on-chain program
-- Member access is verified through Solana smart contract
-- Consider using hardware wallets for additional security
-
-## Development Guidelines
-
-### Testing Encryption/Decryption
-
-- Use the built-in verification tools in the dashboard
-- Check browser console for detailed logs during encryption/decryption
-- Test with different wallet adapters to ensure compatibility
-
-### Adding New Features
-
-- Maintain the end-to-end encryption model
-- Keep sensitive operations client-side
-- Avoid sending plaintext to the backend
-
-## Deployment
-
-For production deployment:
-
-1. Set appropriate environment variables
-2. Use HTTPS for all communications
-3. Configure CORS settings for your domain
-4. Use a production-ready Supabase project
-5. Consider implementing rate limiting for API endpoints
 
 ## Contributing
 
