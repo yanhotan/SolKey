@@ -358,7 +358,7 @@ function SolanaWalletConnect({
             toast.error("Payment failed. Please try again.");
             setShowPayment(false); // Go back to wallet connection
           }}
-          amount={currency === "sol" ? 0.5 : 20}
+          amount={currency === "sol" ? 0.095 : 20}
           currency={currency}
         />
       )}

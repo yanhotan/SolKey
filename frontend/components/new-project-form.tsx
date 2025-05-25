@@ -12,8 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/hooks/use-toast"
 import { saveProject } from "@/lib/local-storage"
 import { useWallet } from "@solana/wallet-adapter-react"
-// import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
-// import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
+import { useWalletUser } from "@/hooks/use-wallet-user"
 // import { useWalletEncryption } from "@/hooks/use-wallet-encryption"
 
 export function NewProjectForm() {
@@ -27,6 +26,7 @@ export function NewProjectForm() {
   })
   const router = useRouter()
   const { connected, publicKey } = useWallet()
+  const { user, isLoading: userLoading, error: userError } = useWalletUser()
   // const { isInitialized, handleSignMessage } = useWalletEncryption()
 
   // useEffect(() => {
@@ -41,14 +41,25 @@ export function NewProjectForm() {
   //     });
   //   }
   // }, [connected, isInitialized, handleSignMessage, isLoading]);
-
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
+    
     try {
       if (!connected) {
         throw new Error('Please connect your wallet first');
+      }
+      
+      // Get wallet address
+      const walletAddress = publicKey?.toBase58();
+      if (!walletAddress) {
+        throw new Error('Could not retrieve your wallet address. Please reconnect your wallet.');
+      }
+      
+      // Wait for user to be loaded if necessary
+      if (!user && !userLoading) {
+        throw new Error('User information not available. Please try again.');
       }
 
       // if (!isInitialized) {
@@ -84,7 +95,9 @@ export function NewProjectForm() {
         name: projectName.trim(),
         description: projectDescription.trim(),
         environments: selectedEnvironments,
-        createdAt: new Date().toISOString(),
+        wallet_address: walletAddress, // Associate with wallet address
+        user_id: user?.id, // Link to user if available
+        createdAt: new Date().toISOString(),        
         updatedAt: new Date().toISOString(),
         status: 'active' as const,
         // encryptionKey: encryptionKey // Store encryption key with project
@@ -95,36 +108,39 @@ export function NewProjectForm() {
       if (!saved) {
         throw new Error('Failed to save project');
       }
-
       
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/projects`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: projectName.trim(),
-        description: projectDescription.trim(),
-        environments: selectedEnvironments,
-        creatorId: "6b10bd1f-3d48-4d84-9585-18ec0ec5d93e",
-        creatorWalletAddress: publicKey?.toBase58() || "",
-      }),
-    });
+      // Include optional debug info for troubleshooting
+      console.log('Creating project with user data:', {
+        userId: user?.id,
+        walletAddress,
+        hasUserData: !!user
+      });
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}/api/projects`, 
+        {method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: projectName.trim(),
+          description: projectDescription.trim(),
+          environments: selectedEnvironments,
+          creatorId: user?.id, // Using the user ID from the hook if available
+          creatorWalletAddress: walletAddress,
+          // Send a flag that tells the backend to ensure the user exists
+          ensureUserExists: true
+        }),
+      });
 
-    if (!response.ok) {
-      const { error } = await response.json();
-      throw new Error(error || "Failed to create project");
-    }
+      if (!response.ok) {
+        const { error } = await response.json();
+        throw new Error(error || "Failed to create project");
+      }
 
-    const project = await response.json();
-    toast({
-      title: "Project created",
-      description: `${project.name} has been created successfully.`,
-    });
-    
+      const project = await response.json();
       toast({
         title: "Project created",
-        description: `${projectName} has been created successfully.`,
+        description: `${project.name} has been created successfully.`,
       });
 
       // Navigate to the new project
@@ -220,19 +236,18 @@ export function NewProjectForm() {
               </div>
             </div>
           </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
+        </CardContent>        <CardFooter className="flex justify-between">
           <Button variant="outline" type="button" onClick={() => router.push("/dashboard/projects")}>
             Cancel
           </Button>
           <Button 
             type="submit" 
-            disabled={isLoading || !projectName.trim() || !connected }          >
+            disabled={isLoading || !projectName.trim() || !connected}
+          >
             {isLoading ? "Creating Project..." : 
              !connected ? "Connect Wallet to Create" :
-            //  !isInitialized ? "Initialize Encryption" :
-            //  !isInitialized ? "Initialize Encryption" :
-            //  !isInitialized ? "Initialize Encryption" :
+             userLoading ? "Loading User Data..." :
+             userError ? "Error Loading Wallet Data" :
              "Create Project"}
           </Button>
         </CardFooter>

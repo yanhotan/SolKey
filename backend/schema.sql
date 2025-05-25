@@ -3,6 +3,7 @@ CREATE TABLE projects (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    creator_id UUID REFERENCES users(id),
     status VARCHAR(20) CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

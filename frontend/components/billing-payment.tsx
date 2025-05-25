@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey, Transaction, SystemProgram, Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Check, AlertCircle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { 
-  getAssociatedTokenAddress, 
-  createAssociatedTokenAccountInstruction, 
-  createTransferInstruction, 
-  TOKEN_PROGRAM_ID 
+import {
+  TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  createTransferInstruction,
 } from "@solana/spl-token";
 import { toast } from "sonner";
 
@@ -28,7 +28,7 @@ export function BillingPayment({
   onClose,
   onSuccess,
   onError,
-  amount = 0.5,
+  amount = 0.095,
   currency = "sol",
 }: BillingPaymentProps) {
   const { publicKey, sendTransaction } = useWallet();
@@ -58,8 +58,7 @@ export function BillingPayment({
       
       // Convert recipient address to Solana public key format
       const recipient = new PublicKey(recipientAddress);
-      
-      if (currency === "sol") {
+        if (currency === "sol") {
         const instruction = SystemProgram.transfer({
           fromPubkey: publicKey,
           toPubkey: recipient,
@@ -75,39 +74,38 @@ export function BillingPayment({
         transaction.feePayer = publicKey;
         
         try {
-        console.log("Sending SOL transaction...");
-        // Send transaction and await confirmation
-        const signature = await sendTransaction(transaction, connection);
-        console.log("Transaction sent with signature:", signature);
-        setTxSignature(signature);
-        
-        // Wait for confirmation
-        console.log("Waiting for confirmation...");
-        const confirmation = await connection.confirmTransaction(signature, "confirmed");
-        console.log("Confirmation received:", confirmation);
-        
-        if (confirmation.value.err) {
-          throw new Error("Transaction failed to confirm");
+          console.log("Sending SOL transaction...");
+          // Send transaction and await confirmation
+          const signature = await sendTransaction(transaction, connection);
+          console.log("Transaction sent with signature:", signature);
+          setTxSignature(signature);
+          
+          // Wait for confirmation
+          console.log("Waiting for confirmation...");
+          const confirmation = await connection.confirmTransaction(signature, "confirmed");
+          console.log("Confirmation received:", confirmation);
+          
+          if (confirmation.value.err) {
+            throw new Error("Transaction failed to confirm");
+          }
+          
+          // Important: Set success BEFORE calling onSuccess
+          console.log("Setting status to success");
+          setStatus("success");
+          toast.success("SOL payment successful!");
+          
+          // Delay onSuccess call to allow UI to update
+          setTimeout(() => {
+            onSuccess();
+          }, 3000);
+        } catch (txError) {
+          console.error("Transaction error:", txError);
+          throw txError;
         }
-        
-        // Important: Set success BEFORE calling onSuccess
-        console.log("Setting status to success");
-        setStatus("success");
-        toast.success("SOL payment successful!");
-        
-        // Delay onSuccess call to allow UI to update
-        setTimeout(() => {
-          onSuccess();
-        }, 3000);
-      } catch (txError) {
-        console.error("Transaction error:", txError);
-        throw txError;
-      }
-    } else {
+      } else {
         // PYUSD payment (USDC equivalent on devnet)
         toast.info("Processing PYUSD payment (USDC equivalent)");
-        
-        // Get the associated token accounts for the sender and recipient
+          // Get the associated token accounts for the sender and recipient
         const senderTokenAccount = await getAssociatedTokenAddress(
           PYUSD_MINT, 
           publicKey
@@ -138,16 +136,14 @@ export function BillingPayment({
         
         // PYUSD has 6 decimals like USDC (convert to smallest units)
         const tokenAmount = amount * 1000000; 
-        
-        // Add the transfer instruction
+          // Add the transfer instruction
         transaction.add(
           createTransferInstruction(
             senderTokenAccount, // source
             recipientTokenAccount, // destination
             publicKey, // owner
             tokenAmount, // amount in smallest units
-            [], // multi-signature signers (empty array if not used)
-            TOKEN_PROGRAM_ID // program ID
+            [] // multi-signature signers (empty array if not used)
           )
         );
         

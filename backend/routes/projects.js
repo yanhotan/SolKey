@@ -61,9 +61,7 @@ router.get("/", async (req, res) => {
       name: project.name,
       description: project.description || "",
       status: project.status,
-    }));
-
-    // Format for frontend as expected
+    }));    // Format for frontend as expected
     res.json({
       projects: formattedProjects,
     });

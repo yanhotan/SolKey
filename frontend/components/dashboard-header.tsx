@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ConnectWalletButton } from "@/components/connect-wallet-wallet-button"
 import Link from "next/link"
 import { useWallet } from "@solana/wallet-adapter-react"
+import { useWalletUser } from "@/hooks/use-wallet-user"
 import { Badge } from "@/components/ui/badge"
 import { shortenAddress } from "@/lib/utils"
 import { HTMLAttributes } from "react"
@@ -31,6 +32,15 @@ interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
 export function DashboardHeader() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const { connected, disconnect, publicKey } = useWallet()
+  const { user, isLoading: userLoading, error: userError } = useWalletUser()
+
+  // User data is now available but we're not changing the UI yet
+  // This provides access to:
+  // - user?.id: User database ID
+  // - user?.username: Auto-generated username (user_<wallet_chars>)
+  // - user?.email: Auto-generated email (<wallet_chars>@gmail.com)
+  // - user?.wallet_address: Wallet address
+  // - user?.created_at: Account creation timestamp
 
   const handleDisconnect = async () => {
     try {
