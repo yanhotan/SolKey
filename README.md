@@ -1,8 +1,6 @@
 
 # SolSecure: Solana Wallet-Powered Zero-Trust Secret Management with AI Agent
 
-👉 **Check it out:** [https://solsecure.vercel.app/](url)
-
 SolSecure revolutionizes secret management through zero key management - no private keys to store, no passwords to remember, no complex key rotations. Powered by Solana blockchain technology, users simply connect their wallet and sign messages to securely access encrypted secrets.
 
 **Zero-Trust Security Model**: Implements passwordless authentication where your Solana wallet IS your identity with no additional credentials. Zero key management means no private keys stored anywhere - encryption keys derived from wallet signatures on-demand. Smart contract permissions provide on-chain membership verification ensuring only authorized users access secrets. End-to-end encryption protects secrets in browser before transmission - backend never sees plaintext data.
